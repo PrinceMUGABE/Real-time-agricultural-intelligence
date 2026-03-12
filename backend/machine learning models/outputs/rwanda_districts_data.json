@@ -1,0 +1,2612 @@
+{
+  "Nyarugenge": {
+    "sectors": [
+      [
+        "Gitega",
+        -1.9547,
+        30.0574,
+        "Clay loam"
+      ],
+      [
+        "Kanyinya",
+        -1.9425,
+        30.0234,
+        "Sandy clay"
+      ],
+      [
+        "Kigali",
+        -1.9494,
+        30.0588,
+        "Clay"
+      ],
+      [
+        "Kimisagara",
+        -1.9569,
+        30.0397,
+        "Sandy loam"
+      ],
+      [
+        "Mageragere",
+        -1.9872,
+        30.0089,
+        "Clay loam"
+      ],
+      [
+        "Muhima",
+        -1.9436,
+        30.0614,
+        "Sandy clay"
+      ],
+      [
+        "Nyakabanda",
+        -1.9647,
+        30.0397,
+        "Clay"
+      ],
+      [
+        "Nyamirambo",
+        -1.975,
+        30.0397,
+        "Sandy loam"
+      ],
+      [
+        "Nyarugenge",
+        -1.9508,
+        30.0556,
+        "Clay loam"
+      ],
+      [
+        "Rwezamenyo",
+        -1.9494,
+        30.0556,
+        "Clay"
+      ]
+    ]
+  },
+  "Gasabo": {
+    "sectors": [
+      [
+        "Bumbogo",
+        -1.8897,
+        30.1147,
+        "Sandy clay"
+      ],
+      [
+        "Gatsata",
+        -1.9178,
+        30.0672,
+        "Clay loam"
+      ],
+      [
+        "Gikomero",
+        -1.8794,
+        30.1969,
+        "Sandy loam"
+      ],
+      [
+        "Gisozi",
+        -1.9289,
+        30.0839,
+        "Clay"
+      ],
+      [
+        "Jabana",
+        -1.8961,
+        30.0506,
+        "Sandy clay"
+      ],
+      [
+        "Jali",
+        -1.8897,
+        30.1672,
+        "Clay loam"
+      ],
+      [
+        "Kacyiru",
+        -1.9447,
+        30.0922,
+        "Loamy sand"
+      ],
+      [
+        "Kimihurura",
+        -1.9536,
+        30.0922,
+        "Clay"
+      ],
+      [
+        "Kimironko",
+        -1.9494,
+        30.1191,
+        "Sandy loam"
+      ],
+      [
+        "Kinyinya",
+        -1.9178,
+        30.1017,
+        "Clay loam"
+      ],
+      [
+        "Ndera",
+        -1.9178,
+        30.1672,
+        "Sandy clay"
+      ],
+      [
+        "Nduba",
+        -1.8794,
+        30.1372,
+        "Clay"
+      ],
+      [
+        "Remera",
+        -1.9557,
+        30.1097,
+        "Clay loam"
+      ],
+      [
+        "Rusororo",
+        -1.9289,
+        30.1447,
+        "Sandy loam"
+      ],
+      [
+        "Rutunga",
+        -1.8897,
+        30.1447,
+        "Clay"
+      ]
+    ]
+  },
+  "Kicukiro": {
+    "sectors": [
+      [
+        "Gahanga",
+        -2.0247,
+        30.1017,
+        "Sandy clay"
+      ],
+      [
+        "Gatenga",
+        -1.9872,
+        30.0922,
+        "Clay loam"
+      ],
+      [
+        "Gikondo",
+        -1.975,
+        30.0756,
+        "Sandy loam"
+      ],
+      [
+        "Kagarama",
+        -1.9935,
+        30.0922,
+        "Clay"
+      ],
+      [
+        "Kanombe",
+        -1.975,
+        30.1286,
+        "Sandy clay"
+      ],
+      [
+        "Kigarama",
+        -2.0006,
+        30.1156,
+        "Clay loam"
+      ],
+      [
+        "Masaka",
+        -2.0247,
+        30.1447,
+        "Sandy loam"
+      ],
+      [
+        "Niboye",
+        -1.9872,
+        30.1097,
+        "Clay"
+      ],
+      [
+        "Nyarugunga",
+        -1.9935,
+        30.1286,
+        "Sandy clay"
+      ],
+      [
+        "Kicukiro",
+        -1.97,
+        30.1,
+        "Loam"
+      ]
+    ]
+  },
+  "Bugesera": {
+    "sectors": [
+      [
+        "Gashora",
+        -2.1733,
+        30.25,
+        "Sandy clay"
+      ],
+      [
+        "Juru",
+        -2.1347,
+        30.2225,
+        "Clay loam"
+      ],
+      [
+        "Kamabuye",
+        -2.1153,
+        30.25,
+        "Sandy loam"
+      ],
+      [
+        "Mareba",
+        -2.1347,
+        30.2775,
+        "Clay"
+      ],
+      [
+        "Mayange",
+        -2.1541,
+        30.2225,
+        "Sandy clay"
+      ],
+      [
+        "Musenyi",
+        -2.1153,
+        30.2775,
+        "Clay loam"
+      ],
+      [
+        "Mwogo",
+        -2.1733,
+        30.2225,
+        "Sandy loam"
+      ],
+      [
+        "Ngeruka",
+        -2.1541,
+        30.2775,
+        "Clay"
+      ],
+      [
+        "Ntarama",
+        -2.1153,
+        30.2225,
+        "Sandy clay"
+      ],
+      [
+        "Nyamata",
+        -2.1347,
+        30.25,
+        "Clay loam"
+      ],
+      [
+        "Nyarugenge",
+        -2.1541,
+        30.25,
+        "Sandy loam"
+      ],
+      [
+        "Rilima",
+        -2.1733,
+        30.2775,
+        "Clay"
+      ],
+      [
+        "Ruhuha",
+        -2.1733,
+        30.25,
+        "Sandy clay"
+      ],
+      [
+        "Sake",
+        -2.1347,
+        30.2225,
+        "Clay loam"
+      ],
+      [
+        "Shyara",
+        -2.1153,
+        30.25,
+        "Sandy loam"
+      ]
+    ]
+  },
+  "Gatsibo": {
+    "sectors": [
+      [
+        "Gasange",
+        -1.7117,
+        30.45,
+        "Clay loam"
+      ],
+      [
+        "Gatsibo",
+        -1.7117,
+        30.4775,
+        "Sandy clay"
+      ],
+      [
+        "Gitoki",
+        -1.6925,
+        30.45,
+        "Clay"
+      ],
+      [
+        "Kabarore",
+        -1.6925,
+        30.4775,
+        "Sandy loam"
+      ],
+      [
+        "Kageyo",
+        -1.6731,
+        30.45,
+        "Clay loam"
+      ],
+      [
+        "Kiramuruzi",
+        -1.6731,
+        30.4775,
+        "Sandy clay"
+      ],
+      [
+        "Kiziguro",
+        -1.7117,
+        30.505,
+        "Clay"
+      ],
+      [
+        "Muhura",
+        -1.6925,
+        30.505,
+        "Sandy loam"
+      ],
+      [
+        "Murambi",
+        -1.6731,
+        30.505,
+        "Clay loam"
+      ],
+      [
+        "Ngarama",
+        -1.7311,
+        30.45,
+        "Sandy clay"
+      ],
+      [
+        "Nyagihanga",
+        -1.7311,
+        30.4775,
+        "Clay"
+      ],
+      [
+        "Remera",
+        -1.7311,
+        30.505,
+        "Sandy loam"
+      ],
+      [
+        "Rugarama",
+        -1.7506,
+        30.45,
+        "Clay loam"
+      ],
+      [
+        "Rwimbogo",
+        -1.7506,
+        30.4775,
+        "Sandy clay"
+      ]
+    ]
+  },
+  "Kayonza": {
+    "sectors": [
+      [
+        "Gahini",
+        -1.8561,
+        30.4775,
+        "Clay loam"
+      ],
+      [
+        "Kabare",
+        -1.8561,
+        30.505,
+        "Sandy clay"
+      ],
+      [
+        "Kabarondo",
+        -1.8367,
+        30.4775,
+        "Clay"
+      ],
+      [
+        "Mukarange",
+        -1.8367,
+        30.505,
+        "Sandy loam"
+      ],
+      [
+        "Murama",
+        -1.8172,
+        30.4775,
+        "Clay loam"
+      ],
+      [
+        "Murundi",
+        -1.8172,
+        30.505,
+        "Sandy clay"
+      ],
+      [
+        "Mwiri",
+        -1.8561,
+        30.5325,
+        "Clay"
+      ],
+      [
+        "Ndego",
+        -1.8367,
+        30.5325,
+        "Sandy loam"
+      ],
+      [
+        "Nyamirama",
+        -1.8172,
+        30.5325,
+        "Clay loam"
+      ],
+      [
+        "Rukara",
+        -1.8756,
+        30.4775,
+        "Sandy clay"
+      ],
+      [
+        "Ruramira",
+        -1.8756,
+        30.505,
+        "Clay"
+      ],
+      [
+        "Rwinkwavu",
+        -1.8756,
+        30.5325,
+        "Sandy loam"
+      ]
+    ]
+  },
+  "Kirehe": {
+    "sectors": [
+      [
+        "Gahara",
+        -2.2506,
+        30.65,
+        "Clay loam"
+      ],
+      [
+        "Gatore",
+        -2.2506,
+        30.6775,
+        "Sandy clay"
+      ],
+      [
+        "Kigarama",
+        -2.2311,
+        30.65,
+        "Clay"
+      ],
+      [
+        "Kigina",
+        -2.2311,
+        30.6775,
+        "Sandy loam"
+      ],
+      [
+        "Kirehe",
+        -2.2117,
+        30.65,
+        "Clay loam"
+      ],
+      [
+        "Mahama",
+        -2.2117,
+        30.6775,
+        "Sandy clay"
+      ],
+      [
+        "Mpanga",
+        -2.2506,
+        30.705,
+        "Clay"
+      ],
+      [
+        "Musaza",
+        -2.2311,
+        30.705,
+        "Sandy loam"
+      ],
+      [
+        "Mushikiri",
+        -2.2117,
+        30.705,
+        "Clay loam"
+      ],
+      [
+        "Nasho",
+        -2.27,
+        30.65,
+        "Sandy clay"
+      ],
+      [
+        "Nyamugali",
+        -2.27,
+        30.6775,
+        "Clay"
+      ],
+      [
+        "Nyarubuye",
+        -2.27,
+        30.705,
+        "Sandy loam"
+      ]
+    ]
+  },
+  "Ngoma": {
+    "sectors": [
+      [
+        "Gashanda",
+        -2.1733,
+        30.45,
+        "Clay loam"
+      ],
+      [
+        "Jarama",
+        -2.1733,
+        30.4775,
+        "Sandy clay"
+      ],
+      [
+        "Karembo",
+        -2.1539,
+        30.45,
+        "Clay"
+      ],
+      [
+        "Kazo",
+        -2.1539,
+        30.4775,
+        "Sandy loam"
+      ],
+      [
+        "Kibungo",
+        -2.1344,
+        30.45,
+        "Clay loam"
+      ],
+      [
+        "Mugesera",
+        -2.1344,
+        30.4775,
+        "Sandy clay"
+      ],
+      [
+        "Murama",
+        -2.1733,
+        30.505,
+        "Clay"
+      ],
+      [
+        "Mutenderi",
+        -2.1539,
+        30.505,
+        "Sandy loam"
+      ],
+      [
+        "Remera",
+        -2.1344,
+        30.505,
+        "Clay loam"
+      ],
+      [
+        "Rukira",
+        -2.1928,
+        30.45,
+        "Sandy clay"
+      ],
+      [
+        "Rukumberi",
+        -2.1928,
+        30.4775,
+        "Clay"
+      ],
+      [
+        "Rurenge",
+        -2.1928,
+        30.505,
+        "Sandy loam"
+      ],
+      [
+        "Sake",
+        -2.2122,
+        30.45,
+        "Clay loam"
+      ],
+      [
+        "Zaza",
+        -2.2122,
+        30.4775,
+        "Sandy clay"
+      ]
+    ]
+  },
+  "Nyagatare": {
+    "sectors": [
+      [
+        "Gatunda",
+        -1.4478,
+        30.45,
+        "Clay loam"
+      ],
+      [
+        "Karama",
+        -1.4478,
+        30.4775,
+        "Sandy clay"
+      ],
+      [
+        "Katabagemu",
+        -1.4283,
+        30.45,
+        "Clay"
+      ],
+      [
+        "Karangazi",
+        -1.4283,
+        30.4775,
+        "Sandy loam"
+      ],
+      [
+        "Kiyombe",
+        -1.4089,
+        30.45,
+        "Clay loam"
+      ],
+      [
+        "Matimba",
+        -1.4089,
+        30.4775,
+        "Sandy clay"
+      ],
+      [
+        "Mimuri",
+        -1.4478,
+        30.505,
+        "Clay"
+      ],
+      [
+        "Mukama",
+        -1.4283,
+        30.505,
+        "Sandy loam"
+      ],
+      [
+        "Musheri",
+        -1.4089,
+        30.505,
+        "Clay loam"
+      ],
+      [
+        "Nyagatare",
+        -1.4672,
+        30.45,
+        "Sandy clay"
+      ],
+      [
+        "Rukomo",
+        -1.4672,
+        30.4775,
+        "Clay"
+      ],
+      [
+        "Rwempasha",
+        -1.4672,
+        30.505,
+        "Sandy loam"
+      ],
+      [
+        "Rwimiyaga",
+        -1.4867,
+        30.45,
+        "Clay loam"
+      ],
+      [
+        "Tabagwe",
+        -1.4867,
+        30.4775,
+        "Sandy clay"
+      ]
+    ]
+  },
+  "Rwamagana": {
+    "sectors": [
+      [
+        "Fumbwe",
+        -1.9506,
+        30.35,
+        "Clay loam"
+      ],
+      [
+        "Gahengeri",
+        -1.9506,
+        30.3775,
+        "Sandy clay"
+      ],
+      [
+        "Gishali",
+        -1.9311,
+        30.35,
+        "Clay"
+      ],
+      [
+        "Karenge",
+        -1.9311,
+        30.3775,
+        "Sandy loam"
+      ],
+      [
+        "Kigabiro",
+        -1.9117,
+        30.35,
+        "Clay loam"
+      ],
+      [
+        "Muhazi",
+        -1.9117,
+        30.3775,
+        "Sandy clay"
+      ],
+      [
+        "Munyaga",
+        -1.9506,
+        30.405,
+        "Clay"
+      ],
+      [
+        "Munyiginya",
+        -1.9311,
+        30.405,
+        "Sandy loam"
+      ],
+      [
+        "Mwulire",
+        -1.9117,
+        30.405,
+        "Clay loam"
+      ],
+      [
+        "Nyakariro",
+        -1.97,
+        30.35,
+        "Sandy clay"
+      ],
+      [
+        "Nzige",
+        -1.97,
+        30.3775,
+        "Clay"
+      ],
+      [
+        "Rubona",
+        -1.97,
+        30.405,
+        "Sandy loam"
+      ],
+      [
+        "Rukara",
+        -1.9894,
+        30.35,
+        "Clay loam"
+      ],
+      [
+        "Rweru",
+        -1.9894,
+        30.3775,
+        "Sandy clay"
+      ]
+    ]
+  },
+  "Burera": {
+    "sectors": [
+      [
+        "Bungwe",
+        -1.4478,
+        29.85,
+        "Clay loam"
+      ],
+      [
+        "Butaro",
+        -1.4478,
+        29.8775,
+        "Sandy clay"
+      ],
+      [
+        "Cyanika",
+        -1.4283,
+        29.85,
+        "Clay"
+      ],
+      [
+        "Cyeru",
+        -1.4283,
+        29.8775,
+        "Sandy loam"
+      ],
+      [
+        "Gahunga",
+        -1.4089,
+        29.85,
+        "Clay loam"
+      ],
+      [
+        "Gatebe",
+        -1.4089,
+        29.8775,
+        "Sandy clay"
+      ],
+      [
+        "Gitovu",
+        -1.4478,
+        29.905,
+        "Clay"
+      ],
+      [
+        "Kagogo",
+        -1.4283,
+        29.905,
+        "Sandy loam"
+      ],
+      [
+        "Kinoni",
+        -1.4089,
+        29.905,
+        "Clay loam"
+      ],
+      [
+        "Kinyababa",
+        -1.4672,
+        29.85,
+        "Sandy clay"
+      ],
+      [
+        "Kivuye",
+        -1.4672,
+        29.8775,
+        "Clay"
+      ],
+      [
+        "Nemba",
+        -1.4672,
+        29.905,
+        "Sandy loam"
+      ],
+      [
+        "Rugarama",
+        -1.4867,
+        29.85,
+        "Clay loam"
+      ],
+      [
+        "Rugendabari",
+        -1.4867,
+        29.8775,
+        "Sandy clay"
+      ],
+      [
+        "Ruhunde",
+        -1.4867,
+        29.905,
+        "Clay"
+      ],
+      [
+        "Rusarabuye",
+        -1.5061,
+        29.85,
+        "Sandy loam"
+      ],
+      [
+        "Rwerere",
+        -1.5061,
+        29.8775,
+        "Clay loam"
+      ]
+    ]
+  },
+  "Gakenke": {
+    "sectors": [
+      [
+        "Coko",
+        -1.7117,
+        29.85,
+        "Sandy clay"
+      ],
+      [
+        "Cyabingo",
+        -1.7117,
+        29.8775,
+        "Clay loam"
+      ],
+      [
+        "Gakenke",
+        -1.6925,
+        29.85,
+        "Clay"
+      ],
+      [
+        "Gashenyi",
+        -1.6925,
+        29.8775,
+        "Sandy loam"
+      ],
+      [
+        "Janja",
+        -1.6731,
+        29.85,
+        "Clay loam"
+      ],
+      [
+        "Kamubuga",
+        -1.6731,
+        29.8775,
+        "Sandy clay"
+      ],
+      [
+        "Karambo",
+        -1.7117,
+        29.905,
+        "Clay"
+      ],
+      [
+        "Kivuruga",
+        -1.6925,
+        29.905,
+        "Sandy loam"
+      ],
+      [
+        "Mataba",
+        -1.6731,
+        29.905,
+        "Clay loam"
+      ],
+      [
+        "Minazi",
+        -1.7311,
+        29.85,
+        "Sandy clay"
+      ],
+      [
+        "Mugunga",
+        -1.7311,
+        29.8775,
+        "Clay"
+      ],
+      [
+        "Muhondo",
+        -1.6925,
+        29.8925,
+        "Clay"
+      ],
+      [
+        "Muyongwe",
+        -1.7506,
+        29.85,
+        "Clay loam"
+      ],
+      [
+        "Muzo",
+        -1.7506,
+        29.8775,
+        "Sandy clay"
+      ],
+      [
+        "Nemba",
+        -1.7506,
+        29.905,
+        "Clay"
+      ],
+      [
+        "Ruli",
+        -1.77,
+        29.85,
+        "Sandy loam"
+      ],
+      [
+        "Rusasa",
+        -1.77,
+        29.8775,
+        "Clay loam"
+      ],
+      [
+        "Rushashi",
+        -1.77,
+        29.905,
+        "Sandy clay"
+      ]
+    ]
+  },
+  "Gicumbi": {
+    "sectors": [
+      [
+        "Bukure",
+        -1.5583,
+        30.1,
+        "Clay loam"
+      ],
+      [
+        "Bwisige",
+        -1.5583,
+        30.1275,
+        "Sandy clay"
+      ],
+      [
+        "Byumba",
+        -1.5389,
+        30.1,
+        "Clay"
+      ],
+      [
+        "Cyumba",
+        -1.5389,
+        30.1275,
+        "Sandy loam"
+      ],
+      [
+        "Giti",
+        -1.5194,
+        30.1,
+        "Clay loam"
+      ],
+      [
+        "Kaniga",
+        -1.5194,
+        30.1275,
+        "Sandy clay"
+      ],
+      [
+        "Manyagiro",
+        -1.5583,
+        30.155,
+        "Clay"
+      ],
+      [
+        "Miyove",
+        -1.5389,
+        30.155,
+        "Sandy loam"
+      ],
+      [
+        "Mugambi",
+        -1.5194,
+        30.155,
+        "Clay loam"
+      ],
+      [
+        "Mukarange",
+        -1.5778,
+        30.1,
+        "Sandy clay"
+      ],
+      [
+        "Muko",
+        -1.5778,
+        30.1275,
+        "Clay"
+      ],
+      [
+        "Mutete",
+        -1.5778,
+        30.155,
+        "Sandy loam"
+      ],
+      [
+        "Nyamiyaga",
+        -1.5972,
+        30.1,
+        "Clay loam"
+      ],
+      [
+        "Nyankenke",
+        -1.5972,
+        30.1275,
+        "Sandy clay"
+      ],
+      [
+        "Rubaya",
+        -1.5972,
+        30.155,
+        "Clay"
+      ],
+      [
+        "Rukomo",
+        -1.6167,
+        30.1,
+        "Sandy loam"
+      ],
+      [
+        "Rushaki",
+        -1.6167,
+        30.1275,
+        "Clay loam"
+      ],
+      [
+        "Rutare",
+        -1.6167,
+        30.155,
+        "Sandy clay"
+      ],
+      [
+        "Ruvune",
+        -1.6361,
+        30.1,
+        "Clay"
+      ],
+      [
+        "Rwamiko",
+        -1.6361,
+        30.1275,
+        "Sandy loam"
+      ],
+      [
+        "Shangasha",
+        -1.6361,
+        30.155,
+        "Clay loam"
+      ]
+    ]
+  },
+  "Musanze": {
+    "sectors": [
+      [
+        "Busogo",
+        -1.5583,
+        29.5561,
+        "Clay loam"
+      ],
+      [
+        "Cyuve",
+        -1.5389,
+        29.5561,
+        "Sandy clay"
+      ],
+      [
+        "Gacaca",
+        -1.5583,
+        29.5836,
+        "Clay"
+      ],
+      [
+        "Gashaki",
+        -1.5389,
+        29.5836,
+        "Sandy loam"
+      ],
+      [
+        "Gataraga",
+        -1.5194,
+        29.5561,
+        "Clay loam"
+      ],
+      [
+        "Kimonyi",
+        -1.5194,
+        29.5836,
+        "Sandy clay"
+      ],
+      [
+        "Kinigi",
+        -1.5583,
+        29.6111,
+        "Clay"
+      ],
+      [
+        "Muhoza",
+        -1.5389,
+        29.6111,
+        "Sandy loam"
+      ],
+      [
+        "Muko",
+        -1.5194,
+        29.6111,
+        "Clay loam"
+      ],
+      [
+        "Musanze",
+        -1.5778,
+        29.5561,
+        "Sandy clay"
+      ],
+      [
+        "Nkotsi",
+        -1.5778,
+        29.5836,
+        "Clay"
+      ],
+      [
+        "Nyange",
+        -1.5778,
+        29.6111,
+        "Sandy loam"
+      ],
+      [
+        "Remera",
+        -1.5972,
+        29.5561,
+        "Clay loam"
+      ],
+      [
+        "Rwaza",
+        -1.5972,
+        29.5836,
+        "Sandy clay"
+      ],
+      [
+        "Shingiro",
+        -1.5972,
+        29.6111,
+        "Clay"
+      ]
+    ]
+  },
+  "Rulindo": {
+    "sectors": [
+      [
+        "Base",
+        -1.7311,
+        29.9931,
+        "Clay loam"
+      ],
+      [
+        "Burega",
+        -1.7311,
+        30.0206,
+        "Sandy clay"
+      ],
+      [
+        "Bushoki",
+        -1.7117,
+        29.9931,
+        "Clay"
+      ],
+      [
+        "Buyoga",
+        -1.7117,
+        30.0206,
+        "Sandy loam"
+      ],
+      [
+        "Cyinzuzi",
+        -1.6925,
+        29.9931,
+        "Clay loam"
+      ],
+      [
+        "Cyungo",
+        -1.6925,
+        30.0206,
+        "Sandy clay"
+      ],
+      [
+        "Kinihira",
+        -1.7311,
+        30.0481,
+        "Clay"
+      ],
+      [
+        "Kisaro",
+        -1.7117,
+        30.0481,
+        "Sandy loam"
+      ],
+      [
+        "Kigabiro",
+        -1.78,
+        30.05,
+        "Sandy loam"
+      ],
+      [
+        "Masoro",
+        -1.6925,
+        30.0481,
+        "Clay loam"
+      ],
+      [
+        "Mbogo",
+        -1.7506,
+        29.9931,
+        "Sandy clay"
+      ],
+      [
+        "Murambi",
+        -1.7506,
+        30.0206,
+        "Clay"
+      ],
+      [
+        "Ngoma",
+        -1.7506,
+        30.0481,
+        "Sandy loam"
+      ],
+      [
+        "Ntarabana",
+        -1.77,
+        29.9931,
+        "Clay loam"
+      ],
+      [
+        "Rukozo",
+        -1.77,
+        30.0206,
+        "Sandy clay"
+      ],
+      [
+        "Rusiga",
+        -1.77,
+        30.0481,
+        "Clay"
+      ],
+      [
+        "Shyorongi",
+        -1.7894,
+        29.9931,
+        "Sandy loam"
+      ],
+      [
+        "Tumba",
+        -1.7894,
+        30.0206,
+        "Clay loam"
+      ]
+    ]
+  },
+  "Huye": {
+    "sectors": [
+      [
+        "Gishamvu",
+        -2.6284,
+        29.7453,
+        "Clay loam"
+      ],
+      [
+        "Karama",
+        -2.5942,
+        29.7897,
+        "Sandy clay"
+      ],
+      [
+        "Maraba",
+        -2.5523,
+        29.7442,
+        "Clay"
+      ],
+      [
+        "Mukura",
+        -2.5831,
+        29.6789,
+        "Sandy loam"
+      ],
+      [
+        "Ngoma",
+        -2.6173,
+        29.7564,
+        "Clay loam"
+      ],
+      [
+        "Rusatira",
+        -2.5789,
+        29.7654,
+        "Sandy loam"
+      ],
+      [
+        "Rwaniro",
+        -2.5934,
+        29.7788,
+        "Clay loam"
+      ],
+      [
+        "Simbi",
+        -2.5677,
+        29.7345,
+        "Clay"
+      ],
+      [
+        "Kinazi",
+        -2.5845,
+        29.7567,
+        "Sandy clay"
+      ],
+      [
+        "Tumba",
+        -2.6012,
+        29.7432,
+        "Loam"
+      ],
+      [
+        "Mbazi",
+        -2.5934,
+        29.7654,
+        "Clay loam"
+      ],
+      [
+        "Ruhashya",
+        -2.5878,
+        29.7789,
+        "Sandy loam"
+      ],
+      [
+        "Huye",
+        -2.5967,
+        29.7567,
+        "Clay"
+      ],
+      [
+        "Kigoma",
+        -2.5845,
+        29.7432,
+        "Sandy clay"
+      ]
+    ]
+  },
+  "Nyanza": {
+    "sectors": [
+      [
+        "Busasamana",
+        -2.3519,
+        29.7467,
+        "Clay"
+      ],
+      [
+        "Cyabakamyi",
+        -2.3228,
+        29.7892,
+        "Sandy clay"
+      ],
+      [
+        "Kigoma",
+        -2.3744,
+        29.7564,
+        "Loam"
+      ],
+      [
+        "Mukingo",
+        -2.3853,
+        29.7231,
+        "Clay loam"
+      ],
+      [
+        "Ntyazo",
+        -2.3567,
+        29.7345,
+        "Sandy loam"
+      ],
+      [
+        "Nyagisozi",
+        -2.3789,
+        29.7567,
+        "Clay"
+      ],
+      [
+        "Rwabicuma",
+        -2.3456,
+        29.7678,
+        "Sandy clay"
+      ],
+      [
+        "Kibirizi",
+        -2.3678,
+        29.7789,
+        "Loam"
+      ],
+      [
+        "Muyira",
+        -2.3567,
+        29.7567,
+        "Clay loam"
+      ],
+      [
+        "Nyanza",
+        -2.3789,
+        29.7678,
+        "Sandy loam"
+      ]
+    ]
+  },
+  "Gisagara": {
+    "sectors": [
+      [
+        "Gikonko",
+        -2.4672,
+        29.8564,
+        "Clay"
+      ],
+      [
+        "Kibirizi",
+        -2.4233,
+        29.8789,
+        "Sandy loam"
+      ],
+      [
+        "Mamba",
+        -2.4458,
+        29.8453,
+        "Clay loam"
+      ],
+      [
+        "Muganza",
+        -2.4567,
+        29.8678,
+        "Sandy clay"
+      ],
+      [
+        "Mukindo",
+        -2.4345,
+        29.8567,
+        "Loam"
+      ],
+      [
+        "Musha",
+        -2.4789,
+        29.8345,
+        "Clay loam"
+      ],
+      [
+        "Ndora",
+        -2.4234,
+        29.8567,
+        "Sandy loam"
+      ],
+      [
+        "Nyanza",
+        -2.4567,
+        29.8789,
+        "Clay"
+      ],
+      [
+        "Save",
+        -2.4789,
+        29.8567,
+        "Sandy clay"
+      ],
+      [
+        "Kansi",
+        -2.4567,
+        29.8345,
+        "Loam"
+      ],
+      [
+        "Kigembe",
+        -2.4789,
+        29.8678,
+        "Clay loam"
+      ],
+      [
+        "Gishubi",
+        -2.4567,
+        29.8789,
+        "Sandy loam"
+      ],
+      [
+        "Mugombwa",
+        -2.4345,
+        29.8567,
+        "Clay"
+      ]
+    ]
+  },
+  "Nyaruguru": {
+    "sectors": [
+      [
+        "Busanze",
+        -2.7234,
+        29.6567,
+        "Sandy clay"
+      ],
+      [
+        "Cyahinda",
+        -2.7456,
+        29.6678,
+        "Clay loam"
+      ],
+      [
+        "Kibeho",
+        -2.7567,
+        29.6789,
+        "Loam"
+      ],
+      [
+        "Mata",
+        -2.7678,
+        29.6567,
+        "Clay"
+      ],
+      [
+        "Muganza",
+        -2.7789,
+        29.6678,
+        "Sandy loam"
+      ],
+      [
+        "Munini",
+        -2.7234,
+        29.6789,
+        "Clay loam"
+      ],
+      [
+        "Ngera",
+        -2.7456,
+        29.6567,
+        "Sandy clay"
+      ],
+      [
+        "Ngoma",
+        -2.7567,
+        29.6678,
+        "Loam"
+      ],
+      [
+        "Nyabimata",
+        -2.7678,
+        29.6789,
+        "Clay"
+      ],
+      [
+        "Nyagisozi",
+        -2.7789,
+        29.6567,
+        "Sandy loam"
+      ],
+      [
+        "Ruheru",
+        -2.7234,
+        29.6678,
+        "Clay loam"
+      ],
+      [
+        "Ruramba",
+        -2.7456,
+        29.6789,
+        "Sandy clay"
+      ],
+      [
+        "Rusenge",
+        -2.7567,
+        29.6567,
+        "Loam"
+      ],
+      [
+        "Kivu",
+        -2.7678,
+        29.6678,
+        "Clay"
+      ]
+    ]
+  },
+  "Nyamagabe": {
+    "sectors": [
+      [
+        "Buruhukiro",
+        -2.4234,
+        29.5567,
+        "Sandy loam"
+      ],
+      [
+        "Cyanika",
+        -2.4456,
+        29.5678,
+        "Clay"
+      ],
+      [
+        "Gatare",
+        -2.4567,
+        29.5789,
+        "Sandy clay"
+      ],
+      [
+        "Kaduha",
+        -2.4678,
+        29.5567,
+        "Clay loam"
+      ],
+      [
+        "Kamegeri",
+        -2.4789,
+        29.5678,
+        "Loam"
+      ],
+      [
+        "Kibirizi",
+        -2.4234,
+        29.5789,
+        "Sandy clay"
+      ],
+      [
+        "Kibumbwe",
+        -2.4456,
+        29.5567,
+        "Clay"
+      ],
+      [
+        "Kitabi",
+        -2.4567,
+        29.5678,
+        "Sandy loam"
+      ],
+      [
+        "Mbazi",
+        -2.4678,
+        29.5789,
+        "Clay loam"
+      ],
+      [
+        "Mugano",
+        -2.4789,
+        29.5567,
+        "Loam"
+      ],
+      [
+        "Musange",
+        -2.4234,
+        29.5678,
+        "Sandy clay"
+      ],
+      [
+        "Mushubi",
+        -2.4456,
+        29.5789,
+        "Clay"
+      ],
+      [
+        "Nkomane",
+        -2.4567,
+        29.5567,
+        "Sandy loam"
+      ],
+      [
+        "Tare",
+        -2.4678,
+        29.5678,
+        "Clay loam"
+      ],
+      [
+        "Gasaka",
+        -2.4789,
+        29.5789,
+        "Loam"
+      ],
+      [
+        "Uwinkingi",
+        -2.4234,
+        29.5567,
+        "Sandy clay"
+      ],
+      [
+        "Rugano",
+        -2.4456,
+        29.5678,
+        "Clay"
+      ]
+    ]
+  },
+  "Ruhango": {
+    "sectors": [
+      [
+        "Bweramana",
+        -2.2234,
+        29.7567,
+        "Clay loam"
+      ],
+      [
+        "Byimana",
+        -2.2456,
+        29.7678,
+        "Sandy clay"
+      ],
+      [
+        "Kabagari",
+        -2.2567,
+        29.7789,
+        "Loam"
+      ],
+      [
+        "Kinazi",
+        -2.2678,
+        29.7567,
+        "Clay"
+      ],
+      [
+        "Kinihira",
+        -2.2789,
+        29.7678,
+        "Sandy loam"
+      ],
+      [
+        "Mbuye",
+        -2.2234,
+        29.7789,
+        "Clay loam"
+      ],
+      [
+        "Mwendo",
+        -2.2456,
+        29.7567,
+        "Sandy clay"
+      ],
+      [
+        "Ntongwe",
+        -2.2567,
+        29.7678,
+        "Loam"
+      ],
+      [
+        "Ruhango",
+        -2.2678,
+        29.7789,
+        "Clay"
+      ],
+      [
+        "Byimana",
+        -2.2789,
+        29.7567,
+        "Sandy loam"
+      ]
+    ]
+  },
+  "Muhanga": {
+    "sectors": [
+      [
+        "Cyeza",
+        -2.1234,
+        29.7567,
+        "Clay"
+      ],
+      [
+        "Kabacuzi",
+        -2.1456,
+        29.7678,
+        "Sandy loam"
+      ],
+      [
+        "Kibangu",
+        -2.1567,
+        29.7789,
+        "Clay loam"
+      ],
+      [
+        "Kiyumba",
+        -2.1678,
+        29.7567,
+        "Sandy clay"
+      ],
+      [
+        "Muhanga",
+        -2.1789,
+        29.7678,
+        "Loam"
+      ],
+      [
+        "Mushishiro",
+        -2.1234,
+        29.7789,
+        "Clay"
+      ],
+      [
+        "Nyabinoni",
+        -2.1456,
+        29.7567,
+        "Sandy loam"
+      ],
+      [
+        "Nyamabuye",
+        -2.1567,
+        29.7678,
+        "Clay loam"
+      ],
+      [
+        "Nyarusange",
+        -2.1678,
+        29.7789,
+        "Sandy clay"
+      ],
+      [
+        "Rongi",
+        -2.1789,
+        29.7567,
+        "Loam"
+      ],
+      [
+        "Rugendabari",
+        -2.1234,
+        29.7678,
+        "Clay"
+      ],
+      [
+        "Shyogwe",
+        -2.1456,
+        29.7789,
+        "Sandy loam"
+      ]
+    ]
+  },
+  "Kamonyi": {
+    "sectors": [
+      [
+        "Gacurabwenge",
+        -2.0234,
+        29.7567,
+        "Clay loam"
+      ],
+      [
+        "Karama",
+        -2.0456,
+        29.7678,
+        "Sandy clay"
+      ],
+      [
+        "Kayenzi",
+        -2.0567,
+        29.7789,
+        "Loam"
+      ],
+      [
+        "Kayumbu",
+        -2.0678,
+        29.7567,
+        "Clay"
+      ],
+      [
+        "Mugina",
+        -2.0789,
+        29.7678,
+        "Sandy loam"
+      ],
+      [
+        "Musambira",
+        -2.0234,
+        29.7789,
+        "Clay loam"
+      ],
+      [
+        "Ngamba",
+        -2.0456,
+        29.7567,
+        "Sandy clay"
+      ],
+      [
+        "Nyamiyaga",
+        -2.0567,
+        29.7678,
+        "Loam"
+      ],
+      [
+        "Nyarubaka",
+        -2.0678,
+        29.7789,
+        "Clay"
+      ],
+      [
+        "Rukoma",
+        -2.0789,
+        29.7567,
+        "Sandy loam"
+      ],
+      [
+        "Runda",
+        -2.0234,
+        29.7678,
+        "Clay loam"
+      ],
+      [
+        "Rugarika",
+        -2.0456,
+        29.7789,
+        "Sandy clay"
+      ]
+    ]
+  },
+  "Karongi": {
+    "sectors": [
+      [
+        "Bwishyura",
+        -2.0789,
+        29.3453,
+        "Sandy clay"
+      ],
+      [
+        "Gishyita",
+        -2.1234,
+        29.3789,
+        "Clay loam"
+      ],
+      [
+        "Murambi",
+        -2.0567,
+        29.3231,
+        "Sandy loam"
+      ],
+      [
+        "Rubengera",
+        -2.0892,
+        29.3564,
+        "Clay"
+      ],
+      [
+        "Gashari",
+        -2.0678,
+        29.3456,
+        "Sandy clay"
+      ],
+      [
+        "Gitesi",
+        -2.0789,
+        29.3567,
+        "Loam"
+      ],
+      [
+        "Mubuga",
+        -2.0567,
+        29.3678,
+        "Clay loam"
+      ],
+      [
+        "Murundi",
+        -2.0789,
+        29.3789,
+        "Sandy loam"
+      ],
+      [
+        "Mutuntu",
+        -2.0567,
+        29.3567,
+        "Clay"
+      ],
+      [
+        "Rwankuba",
+        -2.0789,
+        29.3678,
+        "Sandy clay"
+      ],
+      [
+        "Rugabano",
+        -2.0567,
+        29.3789,
+        "Loam"
+      ],
+      [
+        "Ruganda",
+        -2.0789,
+        29.3567,
+        "Clay loam"
+      ],
+      [
+        "Twumba",
+        -2.0567,
+        29.3678,
+        "Sandy loam"
+      ]
+    ]
+  },
+  "Rubavu": {
+    "sectors": [
+      [
+        "Gisenyi",
+        -1.7023,
+        29.2564,
+        "Sandy loam"
+      ],
+      [
+        "Nyamyumba",
+        -1.6789,
+        29.2789,
+        "Clay"
+      ],
+      [
+        "Rugerero",
+        -1.7231,
+        29.2453,
+        "Sandy clay"
+      ],
+      [
+        "Bugeshi",
+        -1.6934,
+        29.2567,
+        "Clay loam"
+      ],
+      [
+        "Busasamana",
+        -1.7123,
+        29.2678,
+        "Loam"
+      ],
+      [
+        "Cyanzarwe",
+        -1.6845,
+        29.2789,
+        "Sandy clay"
+      ],
+      [
+        "Kanama",
+        -1.7234,
+        29.2567,
+        "Clay"
+      ],
+      [
+        "Kanzenze",
+        -1.6956,
+        29.2678,
+        "Sandy loam"
+      ],
+      [
+        "Mudende",
+        -1.7123,
+        29.2789,
+        "Clay loam"
+      ],
+      [
+        "Nyakiriba",
+        -1.6845,
+        29.2567,
+        "Loam"
+      ],
+      [
+        "Nyundo",
+        -1.7234,
+        29.2678,
+        "Sandy clay"
+      ],
+      [
+        "Rubavu",
+        -1.6956,
+        29.2789,
+        "Clay"
+      ]
+    ]
+  },
+  "Rusizi": {
+    "sectors": [
+      [
+        "Bugarama",
+        -2.6789,
+        29.0453,
+        "Clay loam"
+      ],
+      [
+        "Gihundwe",
+        -2.6234,
+        29.0789,
+        "Sandy clay"
+      ],
+      [
+        "Kamembe",
+        -2.6453,
+        29.0231,
+        "Loam"
+      ],
+      [
+        "Butare",
+        -2.6567,
+        29.0567,
+        "Clay"
+      ],
+      [
+        "Bweyeye",
+        -2.6789,
+        29.0678,
+        "Sandy loam"
+      ],
+      [
+        "Gikundamvura",
+        -2.6234,
+        29.0789,
+        "Clay loam"
+      ],
+      [
+        "Gashonga",
+        -2.6453,
+        29.0567,
+        "Sandy clay"
+      ],
+      [
+        "Gitambi",
+        -2.6567,
+        29.0678,
+        "Loam"
+      ],
+      [
+        "Mururu",
+        -2.6789,
+        29.0789,
+        "Clay"
+      ],
+      [
+        "Nkanka",
+        -2.6234,
+        29.0567,
+        "Sandy loam"
+      ],
+      [
+        "Nkombo",
+        -2.6453,
+        29.0678,
+        "Clay loam"
+      ],
+      [
+        "Nkungu",
+        -2.6567,
+        29.0789,
+        "Sandy clay"
+      ],
+      [
+        "Nyakabuye",
+        -2.6789,
+        29.0567,
+        "Loam"
+      ],
+      [
+        "Nyakarenzo",
+        -2.6234,
+        29.0678,
+        "Clay"
+      ],
+      [
+        "Nzahaha",
+        -2.6453,
+        29.0789,
+        "Sandy loam"
+      ],
+      [
+        "Rwimbogo",
+        -2.6567,
+        29.0567,
+        "Clay loam"
+      ],
+      [
+        "Muganza",
+        -2.6789,
+        29.0678,
+        "Sandy clay"
+      ]
+    ]
+  },
+  "Nyamasheke": {
+    "sectors": [
+      [
+        "Kagano",
+        -2.3234,
+        29.1567,
+        "Clay loam"
+      ],
+      [
+        "Kanjongo",
+        -2.3456,
+        29.1678,
+        "Sandy clay"
+      ],
+      [
+        "Karambi",
+        -2.3567,
+        29.1789,
+        "Loam"
+      ],
+      [
+        "Karengera",
+        -2.3678,
+        29.1567,
+        "Clay"
+      ],
+      [
+        "Kilimbi",
+        -2.3789,
+        29.1678,
+        "Sandy loam"
+      ],
+      [
+        "Macuba",
+        -2.3234,
+        29.1789,
+        "Clay loam"
+      ],
+      [
+        "Mahembe",
+        -2.3456,
+        29.1567,
+        "Sandy clay"
+      ],
+      [
+        "Nyabitekeri",
+        -2.3567,
+        29.1678,
+        "Loam"
+      ],
+      [
+        "Rangiro",
+        -2.3678,
+        29.1789,
+        "Clay"
+      ],
+      [
+        "Ruharambuga",
+        -2.3789,
+        29.1567,
+        "Sandy loam"
+      ],
+      [
+        "Shangi",
+        -2.3234,
+        29.1678,
+        "Clay loam"
+      ],
+      [
+        "Bushekeri",
+        -2.3456,
+        29.1789,
+        "Sandy clay"
+      ],
+      [
+        "Bushenge",
+        -2.3567,
+        29.1567,
+        "Loam"
+      ],
+      [
+        "Cyato",
+        -2.3678,
+        29.1678,
+        "Clay"
+      ]
+    ]
+  },
+  "Nyabihu": {
+    "sectors": [
+      [
+        "Bigogwe",
+        -1.6234,
+        29.5567,
+        "Sandy loam"
+      ],
+      [
+        "Jenda",
+        -1.6456,
+        29.5678,
+        "Clay"
+      ],
+      [
+        "Jomba",
+        -1.6567,
+        29.5789,
+        "Sandy clay"
+      ],
+      [
+        "Kabatwa",
+        -1.6678,
+        29.5567,
+        "Clay loam"
+      ],
+      [
+        "Karago",
+        -1.6789,
+        29.5678,
+        "Loam"
+      ],
+      [
+        "Kintobo",
+        -1.6234,
+        29.5789,
+        "Sandy clay"
+      ],
+      [
+        "Mukamira",
+        -1.6456,
+        29.5567,
+        "Clay"
+      ],
+      [
+        "Muringa",
+        -1.6567,
+        29.5678,
+        "Sandy loam"
+      ],
+      [
+        "Rambura",
+        -1.6678,
+        29.5789,
+        "Clay loam"
+      ],
+      [
+        "Rugera",
+        -1.6789,
+        29.5567,
+        "Loam"
+      ],
+      [
+        "Rurembo",
+        -1.6234,
+        29.5678,
+        "Sandy clay"
+      ],
+      [
+        "Shyira",
+        -1.6456,
+        29.5789,
+        "Clay"
+      ]
+    ]
+  },
+  "Ngororero": {
+    "sectors": [
+      [
+        "Bwira",
+        -1.8234,
+        29.6567,
+        "Clay loam"
+      ],
+      [
+        "Gatumba",
+        -1.8456,
+        29.6678,
+        "Sandy clay"
+      ],
+      [
+        "Hindiro",
+        -1.8567,
+        29.6789,
+        "Loam"
+      ],
+      [
+        "Kabaya",
+        -1.8678,
+        29.6567,
+        "Clay"
+      ],
+      [
+        "Kageyo",
+        -1.8789,
+        29.6678,
+        "Sandy loam"
+      ],
+      [
+        "Kavumu",
+        -1.8234,
+        29.6789,
+        "Clay loam"
+      ],
+      [
+        "Matyazo",
+        -1.8456,
+        29.6567,
+        "Sandy clay"
+      ],
+      [
+        "Muhanda",
+        -1.8567,
+        29.6678,
+        "Loam"
+      ],
+      [
+        "Muhororo",
+        -1.8678,
+        29.6789,
+        "Clay"
+      ],
+      [
+        "Ndaro",
+        -1.8789,
+        29.6567,
+        "Sandy loam"
+      ],
+      [
+        "Ngororero",
+        -1.8234,
+        29.6678,
+        "Clay loam"
+      ],
+      [
+        "Nyange",
+        -1.8456,
+        29.6789,
+        "Sandy clay"
+      ],
+      [
+        "Sovu",
+        -1.8567,
+        29.6567,
+        "Loam"
+      ]
+    ]
+  },
+  "Rutsiro": {
+    "sectors": [
+      [
+        "Boneza",
+        -1.9234,
+        29.4567,
+        "Clay"
+      ],
+      [
+        "Gihango",
+        -1.9456,
+        29.4678,
+        "Sandy loam"
+      ],
+      [
+        "Kigeyo",
+        -1.9567,
+        29.4789,
+        "Clay loam"
+      ],
+      [
+        "Kivumu",
+        -1.9678,
+        29.4567,
+        "Sandy clay"
+      ],
+      [
+        "Manihira",
+        -1.9789,
+        29.4678,
+        "Loam"
+      ],
+      [
+        "Mukura",
+        -1.9234,
+        29.4789,
+        "Clay"
+      ],
+      [
+        "Murunda",
+        -1.9456,
+        29.4567,
+        "Sandy loam"
+      ],
+      [
+        "Musasa",
+        -1.9567,
+        29.4678,
+        "Clay loam"
+      ],
+      [
+        "Mushonyi",
+        -1.9678,
+        29.4789,
+        "Sandy clay"
+      ],
+      [
+        "Mushubati",
+        -1.9789,
+        29.4567,
+        "Loam"
+      ],
+      [
+        "Nyabirasi",
+        -1.9234,
+        29.4678,
+        "Clay"
+      ],
+      [
+        "Ruhango",
+        -1.9456,
+        29.4789,
+        "Sandy loam"
+      ],
+      [
+        "Rusebeya",
+        -1.9567,
+        29.4567,
+        "Clay loam"
+      ]
+    ]
+  }
+}
