@@ -9,6 +9,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('userApp.urls')),
     path('notifications/', include('notificationApp.urls')),
+    path('stock/', include('stockApp.urls')),
 ]
 
 if settings.DEBUG:
