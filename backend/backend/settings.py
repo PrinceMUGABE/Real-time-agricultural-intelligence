@@ -80,7 +80,8 @@ INSTALLED_APPS = [
     'corsheaders',
     'userApp',
     'notificationApp',
-    'stockApp'
+    'stockApp',
+    'standardApp',
 ]
 
 MIDDLEWARE = [

@@ -5,7 +5,7 @@ from .models import Stock, StockMovement, StockAlert
 
 @admin.register(Stock)
 class StockAdmin(admin.ModelAdmin):
-    list_display = ['id', 'product_name', 'farmer', 'quantity', 'quality_grade', 
+    list_display = ['id', 'product_name', 'farmer', 'quantity', 'quality_grade', 'price_per_kg', 
                    'location', 'is_active', 'created_at']
     list_filter = ['quality_grade', 'is_active', 'location', 'created_at']
     search_fields = ['product_name', 'farmer__full_name', 'farmer__phone_number']
@@ -13,7 +13,7 @@ class StockAdmin(admin.ModelAdmin):
     
     fieldsets = (
         ('Basic Information', {
-            'fields': ('farmer', 'product_name', 'quantity', 'unit', 'quality_grade')
+            'fields': ('farmer', 'product_name', 'quantity', 'unit', 'quality_grade', 'price_per_kg')
         }),
         ('Location', {
             'fields': ('location',)

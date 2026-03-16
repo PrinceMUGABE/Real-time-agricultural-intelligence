@@ -10,6 +10,7 @@ urlpatterns = [
     path('', include('userApp.urls')),
     path('notifications/', include('notificationApp.urls')),
     path('stock/', include('stockApp.urls')),
+    path('standard/', include('standardApp.urls')),
 ]
 
 if settings.DEBUG:

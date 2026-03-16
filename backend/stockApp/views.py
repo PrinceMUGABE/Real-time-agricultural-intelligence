@@ -22,7 +22,7 @@ from .serializers import (
     StockAlertSerializer,
     StockSummarySerializer,
 )
-from . import translations as nt
+from .translations import nt
 from notificationApp.services import notify_user, notify_system
 
 logger = logging.getLogger(__name__)
@@ -338,6 +338,7 @@ def create_movement(request):
     """
     Create a new stock movement (in / out / transfer / adjustment).
     """
+    print(f"User {request.user.phone_number} is creating movement with data: {request.data}")
     lang = get_language(request)
 
     stock_id = request.data.get('stock')

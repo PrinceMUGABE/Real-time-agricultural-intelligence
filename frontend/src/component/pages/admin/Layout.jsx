@@ -1654,6 +1654,7 @@ export default function AdminLayout() {
     { icon: <BarChart2 size={17} />, label: t("nav.transactions", { defaultValue: "Transactions" }), path: "/admin/transactions" },
     { icon: <ClipboardList size={17} />, label: t("nav.dataEntry", { defaultValue: "Data Entry" }), path: "/admin/crops" },
     { icon: <FileText size={17} />, label: t("nav.contracts", { defaultValue: "Contracts" }), path: "/admin/contracts" },
+    { icon: <FileText size={17} />, label: t("nav.standards", { defaultValue: "Standards" }), path: "/admin/standards" },
   ];
 
   // Profile actions for sidebar

@@ -7,1627 +7,1745 @@ import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import {
-  Plus, X, Search, ChevronLeft, ChevronRight,
-  ChevronsLeft, ChevronsRight, Edit2, Trash2,
-  Package, MapPin, Calendar, ArrowUp, ArrowDown,
-  RefreshCw, Truck, AlertTriangle, Eye, Download,
-  Filter, Grid, List, BarChart2, TrendingUp,
-  TrendingDown, Layers, CheckCircle, Clock,
-  MoreVertical, ChevronDown, FileText, Copy,
-  Printer, Archive, DollarSign, Users, Home,
-  Briefcase, Box, FolderOpen, AlertCircle,
-  Check, Download as DownloadIcon, Upload,
-  PieChart, Activity, Zap
+    Plus, X, Search, ChevronLeft, ChevronRight,
+    ChevronsLeft, ChevronsRight, Edit2, Trash2,
+    Package, MapPin, Calendar, ArrowUp, ArrowDown,
+    RefreshCw, Truck, AlertTriangle, Eye, Download,
+    Filter, Grid, List, BarChart2, TrendingUp,
+    TrendingDown, Layers, CheckCircle, Clock,
+    MoreVertical, ChevronDown, FileText, Copy,
+    Printer, Archive, DollarSign, Users, Home,
+    Briefcase, Box, FolderOpen, AlertCircle,
+    Check, Download as DownloadIcon, Upload,
+    PieChart, Activity, Zap
 } from "lucide-react";
 import locationData from "../../common/locationData.json";
 
 // API Base URL
 const API_BASE_URL = "http://127.0.0.1:8000/stock";
 
+// ─── Location Helper ──────────────────────────────────────────────────────────
+/**
+ * Combines the separate location parts into a single location string
+ * that the backend expects, e.g. "Kigali / Kicukiro / Masaka"
+ * Only includes non-empty parts.
+ */
+function buildLocationString({ province, district, sector }) {
+    return [province, district, sector]
+        .filter(Boolean)
+        .join(" / ");
+}
+
+/**
+ * Parses a location string back into its parts
+ * Handles both " / " and " , " separators
+ */
+function parseLocationString(locationString) {
+    if (!locationString) return { province: "", district: "", sector: "" };
+
+    let parts = [];
+    if (locationString.includes(" / ")) {
+        parts = locationString.split(" / ").map(s => s.trim());
+    } else if (locationString.includes(" , ")) {
+        parts = locationString.split(" , ").map(s => s.trim());
+    } else {
+        parts = [locationString, "", ""];
+    }
+
+    return {
+        province: parts[0] || "",
+        district: parts[1] || "",
+        sector: parts[2] || ""
+    };
+}
+
 // Initial empty form for stock creation/editing
 const emptyStockForm = {
-  product_name: "",
-  quantity: "",
-  quality_grade: "B",
-  province: "",
-  district: "",
-  sector: "",
-  cell: "",
-  village: "",
-  description: "",
-  is_active: true
+    product_name: "",
+    quantity: "",
+    price_per_kg: "",
+    quality_grade: "B",
+    province: "",
+    district: "",
+    sector: "",
+    description: "",
+    is_active: true
 };
 
-// Initial empty form for movement creation
+// Initial empty form for movement creation (simplified)
 const emptyMovementForm = {
-  stock: "",
-  movement_type: "in",
-  quantity: "",
-  to_province: "",
-  to_district: "",
-  to_sector: "",
-  to_cell: "",
-  to_village: "",
-  reference_number: "",
-  notes: ""
+    stock: "",
+    movement_type: "in",
+    quantity: "",
+    notes: ""
 };
 
 // Quality grade options
 const qualityGrades = [
-  { value: "A", label: "Grade A - Premium", color: "#2e7d32", bg: "#e8f5e9" },
-  { value: "B", label: "Grade B - Standard", color: "#1565c0", bg: "#e3f2fd" },
-  { value: "C", label: "Grade C - Economy", color: "#b45309", bg: "#fff7ed" }
+    { value: "A", label: "Grade A - Premium", color: "#2e7d32", bg: "#e8f5e9" },
+    { value: "B", label: "Grade B - Standard", color: "#1565c0", bg: "#e3f2fd" },
+    { value: "C", label: "Grade C - Economy", color: "#b45309", bg: "#fff7ed" }
 ];
 
-// Movement type options
+// Movement type options (simplified - removed transfer)
 const movementTypes = [
-  { value: "in", label: "Stock In", icon: ArrowDown, color: "#2e7d32", bg: "#e8f5e9" },
-  { value: "out", label: "Stock Out", icon: ArrowUp, color: "#c62828", bg: "#ffebee" },
-  { value: "transfer", label: "Transfer", icon: Truck, color: "#1565c0", bg: "#e3f2fd" },
-  { value: "adjustment", label: "Adjustment", icon: RefreshCw, color: "#b45309", bg: "#fff7ed" }
+    { value: "in", label: "Stock In", icon: ArrowDown, color: "#2e7d32", bg: "#e8f5e9" },
+    { value: "out", label: "Stock Out", icon: ArrowUp, color: "#c62828", bg: "#ffebee" },
+    // { value: "adjustment", label: "Adjustment", icon: RefreshCw, color: "#b45309", bg: "#fff7ed" }
 ];
 
 // Alert severity options
 const alertSeverities = [
-  { value: "critical", label: "Critical", color: "#b91c1c", bg: "#fee2e2" },
-  { value: "warning", label: "Warning", color: "#b45309", bg: "#fff7ed" },
-  { value: "info", label: "Info", color: "#2563eb", bg: "#dbeafe" }
+    { value: "critical", label: "Critical", color: "#b91c1c", bg: "#fee2e2" },
+    { value: "warning", label: "Warning", color: "#b45309", bg: "#fff7ed" },
+    { value: "info", label: "Info", color: "#2563eb", bg: "#dbeafe" }
 ];
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function LoadingSpinner() {
-  return (
-    <div className="loading-spinner">
-      <div className="spinner"></div>
-    </div>
-  );
+    return (
+        <div className="loading-spinner">
+            <div className="spinner"></div>
+        </div>
+    );
 }
 
 function SummaryCard({ title, value, icon, subtitle, trend, color, bgColor }) {
-  return (
-    <div className="summary-card" style={{ borderLeft: `4px solid ${color}` }}>
-      <div className="summary-card-content">
-        <div>
-          <p className="summary-card-title">{title}</p>
-          <h3 className="summary-card-value">{value}</h3>
-          {subtitle && <p className="summary-card-subtitle">{subtitle}</p>}
-          {trend && (
-            <div className="summary-card-trend" style={{ color: trend > 0 ? "#2e7d32" : "#c62828" }}>
-              {trend > 0 ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
-              <span>{Math.abs(trend)}% from last month</span>
+    return (
+        <div className="summary-card" style={{ borderLeft: `4px solid ${color}` }}>
+            <div className="summary-card-content">
+                <div>
+                    <p className="summary-card-title">{title}</p>
+                    <h3 className="summary-card-value">{value}</h3>
+                    {subtitle && <p className="summary-card-subtitle">{subtitle}</p>}
+                    {trend && (
+                        <div className="summary-card-trend" style={{ color: trend > 0 ? "#2e7d32" : "#c62828" }}>
+                            {trend > 0 ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
+                            <span>{Math.abs(trend)}% from last month</span>
+                        </div>
+                    )}
+                </div>
+                <div className="summary-card-icon" style={{ backgroundColor: bgColor, color: color }}>
+                    {icon}
+                </div>
             </div>
-          )}
         </div>
-        <div className="summary-card-icon" style={{ backgroundColor: bgColor, color: color }}>
-          {icon}
-        </div>
-      </div>
-    </div>
-  );
+    );
 }
 
 function Pagination({ currentPage, totalPages, onPageChange, pageSize, onPageSizeChange, totalItems }) {
-  const { t } = useTranslation();
-  const pageSizeOptions = [5, 10, 20, 50, 100];
+    const { t } = useTranslation();
+    const pageSizeOptions = [5, 10, 20, 50, 100];
 
-  return (
-    <div className="pagination-container">
-      <div className="pagination-info">
-        <span>{t('showing')} </span>
-        <select
-          className="page-size-select"
-          value={pageSize}
-          onChange={(e) => onPageSizeChange(Number(e.target.value))}
-        >
-          {pageSizeOptions.map(size => (
-            <option key={size} value={size}>{size}</option>
-          ))}
-        </select>
-        <span> {t('of')} {totalItems} {t('entries')}</span>
-      </div>
+    return (
+        <div className="pagination-container">
+            <div className="pagination-info">
+                <span>{t('showing')} </span>
+                <select
+                    className="page-size-select"
+                    value={pageSize}
+                    onChange={(e) => onPageSizeChange(Number(e.target.value))}
+                >
+                    {pageSizeOptions.map(size => (
+                        <option key={size} value={size}>{size}</option>
+                    ))}
+                </select>
+                <span> {t('of')} {totalItems} {t('entries')}</span>
+            </div>
 
-      <div className="pagination-controls">
-        <button className="pagination-btn" onClick={() => onPageChange(1)} disabled={currentPage === 1}>
-          <ChevronsLeft size={16} />
-        </button>
-        <button className="pagination-btn" onClick={() => onPageChange(currentPage - 1)} disabled={currentPage === 1}>
-          <ChevronLeft size={16} />
-        </button>
+            <div className="pagination-controls">
+                <button className="pagination-btn" onClick={() => onPageChange(1)} disabled={currentPage === 1}>
+                    <ChevronsLeft size={16} />
+                </button>
+                <button className="pagination-btn" onClick={() => onPageChange(currentPage - 1)} disabled={currentPage === 1}>
+                    <ChevronLeft size={16} />
+                </button>
 
-        {[...Array(totalPages)].map((_, i) => {
-          const pageNum = i + 1;
-          if (
-            pageNum === 1 ||
-            pageNum === totalPages ||
-            (pageNum >= currentPage - 1 && pageNum <= currentPage + 1)
-          ) {
-            return (
-              <button
-                key={pageNum}
-                className={`pagination-btn ${currentPage === pageNum ? 'active' : ''}`}
-                onClick={() => onPageChange(pageNum)}
-              >
-                {pageNum}
-              </button>
-            );
-          } else if (pageNum === currentPage - 2 || pageNum === currentPage + 2) {
-            return <span key={pageNum} className="pagination-ellipsis">...</span>;
-          }
-          return null;
-        })}
+                {[...Array(totalPages)].map((_, i) => {
+                    const pageNum = i + 1;
+                    if (
+                        pageNum === 1 ||
+                        pageNum === totalPages ||
+                        (pageNum >= currentPage - 1 && pageNum <= currentPage + 1)
+                    ) {
+                        return (
+                            <button
+                                key={pageNum}
+                                className={`pagination-btn ${currentPage === pageNum ? 'active' : ''}`}
+                                onClick={() => onPageChange(pageNum)}
+                            >
+                                {pageNum}
+                            </button>
+                        );
+                    } else if (pageNum === currentPage - 2 || pageNum === currentPage + 2) {
+                        return <span key={pageNum} className="pagination-ellipsis">...</span>;
+                    }
+                    return null;
+                })}
 
-        <button className="pagination-btn" onClick={() => onPageChange(currentPage + 1)} disabled={currentPage === totalPages}>
-          <ChevronRight size={16} />
-        </button>
-        <button className="pagination-btn" onClick={() => onPageChange(totalPages)} disabled={currentPage === totalPages}>
-          <ChevronsRight size={16} />
-        </button>
-      </div>
-    </div>
-  );
+                <button className="pagination-btn" onClick={() => onPageChange(currentPage + 1)} disabled={currentPage === totalPages}>
+                    <ChevronRight size={16} />
+                </button>
+                <button className="pagination-btn" onClick={() => onPageChange(totalPages)} disabled={currentPage === totalPages}>
+                    <ChevronsRight size={16} />
+                </button>
+            </div>
+        </div>
+    );
 }
 
 function FilterBar({ filters, onFilterChange, onSearch, onSort, sortField, sortDirection, viewMode, onViewModeChange }) {
-  const { t } = useTranslation();
+    const { t } = useTranslation();
 
-  const sortOptions = [
-    { value: 'product_name', label: t('product_name') },
-    { value: 'quantity', label: t('quantity') },
-    { value: 'quality_grade', label: t('quality') },
-    { value: 'district', label: t('district') },
-    { value: 'created_at', label: t('created_date') }
-  ];
+    const sortOptions = [
+        { value: 'product_name', label: t('product_name') },
+        { value: 'quantity', label: t('quantity') },
+        { value: 'quality_grade', label: t('quality') },
+        { value: 'location', label: t('location') },
+        { value: 'created_at', label: t('created_date') }
+    ];
 
-  return (
-    <div className="filter-bar">
-      <div className="filter-group">
-        <select
-          className="filter-select"
-          value={filters.quality || ''}
-          onChange={(e) => onFilterChange('quality', e.target.value)}
-        >
-          <option value="">{t('all_qualities')}</option>
-          {qualityGrades.map(grade => (
-            <option key={grade.value} value={grade.value}>{grade.label}</option>
-          ))}
-        </select>
+    // Handle search input change with debounce
+    const handleSearchChange = (e) => {
+        onFilterChange('search', e.target.value);
+    };
 
-        <select
-          className="filter-select"
-          value={filters.status || ''}
-          onChange={(e) => onFilterChange('status', e.target.value)}
-        >
-          <option value="">{t('all_status')}</option>
-          <option value="true">{t('active')}</option>
-          <option value="false">{t('inactive')}</option>
-        </select>
+    return (
+        <div className="filter-bar">
+            <div className="filter-group">
+                <select
+                    className="filter-select"
+                    value={filters.quality || ''}
+                    onChange={(e) => onFilterChange('quality', e.target.value)}
+                >
+                    <option value="">{t('all_qualities')}</option>
+                    {qualityGrades.map(grade => (
+                        <option key={grade.value} value={grade.value}>{grade.label}</option>
+                    ))}
+                </select>
 
-        <select
-          className="filter-select"
-          value={filters.low_stock || ''}
-          onChange={(e) => onFilterChange('low_stock', e.target.value)}
-        >
-          <option value="">{t('all_stock_levels')}</option>
-          <option value="true">{t('low_stock')}</option>
-        </select>
-      </div>
+                <select
+                    className="filter-select"
+                    value={filters.status || ''}
+                    onChange={(e) => onFilterChange('status', e.target.value)}
+                >
+                    <option value="">{t('all_status')}</option>
+                    <option value="true">{t('active')}</option>
+                    <option value="false">{t('inactive')}</option>
+                </select>
 
-      <div className="filter-group">
-        <div className="search-wrapper">
-          <input
-            type="text"
-            className="search-input"
-            placeholder={t('search_stocks')}
-            value={filters.search || ''}
-            onChange={(e) => onFilterChange('search', e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && onSearch()}
-          />
-          <button className="search-btn" onClick={onSearch}>
-            <Search size={16} />
-          </button>
+                <select
+                    className="filter-select"
+                    value={filters.low_stock || ''}
+                    onChange={(e) => onFilterChange('low_stock', e.target.value)}
+                >
+                    <option value="">{t('all_stock_levels')}</option>
+                    <option value="true">{t('low_stock')}</option>
+                </select>
+            </div>
+
+            <div className="filter-group">
+                <div className="search-wrapper">
+                    <input
+                        type="text"
+                        className="search-input"
+                        placeholder={t('search_stocks')}
+                        value={filters.search || ''}
+                        onChange={handleSearchChange}
+                    />
+                    <button className="search-btn" onClick={onSearch}>
+                        <Search size={16} />
+                    </button>
+                </div>
+
+                <select
+                    className="filter-select sort-select"
+                    value={`${sortField}|${sortDirection}`}
+                    onChange={(e) => {
+                        const [field, direction] = e.target.value.split('|');
+                        onSort(field, direction);
+                    }}
+                >
+                    {sortOptions.map(option => (
+                        <React.Fragment key={option.value}>
+                            <option value={`${option.value}|asc`}>{option.label} ↑</option>
+                            <option value={`${option.value}|desc`}>{option.label} ↓</option>
+                        </React.Fragment>
+                    ))}
+                </select>
+
+                <div className="view-mode-toggle">
+                    <button
+                        className={`view-mode-btn ${viewMode === 'grid' ? 'active' : ''}`}
+                        onClick={() => onViewModeChange('grid')}
+                        title={t('grid_view')}
+                    >
+                        <Grid size={16} />
+                    </button>
+                    <button
+                        className={`view-mode-btn ${viewMode === 'list' ? 'active' : ''}`}
+                        onClick={() => onViewModeChange('list')}
+                        title={t('list_view')}
+                    >
+                        <List size={16} />
+                    </button>
+                </div>
+            </div>
         </div>
-
-        <select
-          className="filter-select sort-select"
-          value={`${sortField}|${sortDirection}`}
-          onChange={(e) => {
-            const [field, direction] = e.target.value.split('|');
-            onSort(field, direction);
-          }}
-        >
-          {sortOptions.map(option => (
-            <React.Fragment key={option.value}>
-              <option value={`${option.value}|asc`}>{option.label} ↑</option>
-              <option value={`${option.value}|desc`}>{option.label} ↓</option>
-            </React.Fragment>
-          ))}
-        </select>
-
-        <div className="view-mode-toggle">
-          <button
-            className={`view-mode-btn ${viewMode === 'grid' ? 'active' : ''}`}
-            onClick={() => onViewModeChange('grid')}
-            title={t('grid_view')}
-          >
-            <Grid size={16} />
-          </button>
-          <button
-            className={`view-mode-btn ${viewMode === 'list' ? 'active' : ''}`}
-            onClick={() => onViewModeChange('list')}
-            title={t('list_view')}
-          >
-            <List size={16} />
-          </button>
-        </div>
-      </div>
-    </div>
-  );
+    );
 }
 
-function LocationSelector({ locationParts, onChange, error, isTransfer = false }) {
-  const { t } = useTranslation();
+function LocationSelector({ locationParts, onChange, error }) {
+    const { t } = useTranslation();
 
-  const provinces = locationData.provinces.map(p => p.city || p.province);
+    const provinces = locationData.provinces.map(p => p.city || p.province);
 
-  const districts = locationParts.province
-    ? (locationData.provinces.find(p => (p.city || p.province) === locationParts.province)?.coordinates?.districts || [])
-    : [];
+    const districts = locationParts.province
+        ? (locationData.provinces.find(p => (p.city || p.province) === locationParts.province)?.coordinates?.districts || [])
+        : [];
 
-  const sectors = locationParts.district
-    ? (districts.find(d => d.name === locationParts.district)?.sectors || [])
-    : [];
+    const sectors = locationParts.district
+        ? (districts.find(d => d.name === locationParts.district)?.sectors || [])
+        : [];
 
-  const cells = locationParts.sector
-    ? (sectors.find(s => s.name === locationParts.sector)?.cells || [])
-    : [];
+    return (
+        <div className="location-selector">
+            <div className="location-row">
+                <select
+                    className={`location-select ${error && !locationParts.province ? 'error' : ''}`}
+                    value={locationParts.province}
+                    onChange={(e) => onChange({
+                        ...locationParts,
+                        province: e.target.value,
+                        district: "",
+                        sector: ""
+                    })}
+                >
+                    <option value="">{t('select_province')}</option>
+                    {provinces.map(province => (
+                        <option key={province} value={province}>{province}</option>
+                    ))}
+                </select>
+            </div>
 
-  const villages = locationParts.cell
-    ? (cells.find(c => c.name === locationParts.cell)?.villages || [])
-    : [];
+            <div className="location-row">
+                <select
+                    className={`location-select ${error && !locationParts.district ? 'error' : ''}`}
+                    value={locationParts.district}
+                    onChange={(e) => onChange({
+                        ...locationParts,
+                        district: e.target.value,
+                        sector: ""
+                    })}
+                    disabled={!locationParts.province}
+                >
+                    <option value="">{t('select_district')}</option>
+                    {districts.map(district => (
+                        <option key={district.name} value={district.name}>{district.name}</option>
+                    ))}
+                </select>
+            </div>
 
-  return (
-    <div className="location-selector">
-      <div className="location-row">
-        <select
-          className={`location-select ${error && !locationParts.province ? 'error' : ''}`}
-          value={locationParts.province}
-          onChange={(e) => onChange({ 
-            ...locationParts, 
-            province: e.target.value, 
-            district: "", 
-            sector: "",
-            cell: "",
-            village: ""
-          })}
-        >
-          <option value="">{t('select_province')}</option>
-          {provinces.map(province => (
-            <option key={province} value={province}>{province}</option>
-          ))}
-        </select>
-      </div>
+            <div className="location-row">
+                <select
+                    className={`location-select ${error && !locationParts.sector ? 'error' : ''}`}
+                    value={locationParts.sector}
+                    onChange={(e) => onChange({
+                        ...locationParts,
+                        sector: e.target.value
+                    })}
+                    disabled={!locationParts.district}
+                >
+                    <option value="">{t('select_sector')}</option>
+                    {sectors.map(sector => (
+                        <option key={sector.name} value={sector.name}>{sector.name}</option>
+                    ))}
+                </select>
+            </div>
 
-      <div className="location-row">
-        <select
-          className={`location-select ${error && !locationParts.district ? 'error' : ''}`}
-          value={locationParts.district}
-          onChange={(e) => onChange({ 
-            ...locationParts, 
-            district: e.target.value, 
-            sector: "",
-            cell: "",
-            village: ""
-          })}
-          disabled={!locationParts.province}
-        >
-          <option value="">{t('select_district')}</option>
-          {districts.map(district => (
-            <option key={district.name} value={district.name}>{district.name}</option>
-          ))}
-        </select>
-      </div>
-
-      <div className="location-row">
-        <select
-          className={`location-select ${error && !locationParts.sector ? 'error' : ''}`}
-          value={locationParts.sector}
-          onChange={(e) => onChange({ 
-            ...locationParts, 
-            sector: e.target.value, 
-            cell: "",
-            village: ""
-          })}
-          disabled={!locationParts.district}
-        >
-          <option value="">{t('select_sector')}</option>
-          {sectors.map(sector => (
-            <option key={sector.name} value={sector.name}>{sector.name}</option>
-          ))}
-        </select>
-      </div>
-
-      {isTransfer && (
-        <>
-          <div className="location-row">
-            <select
-              className={`location-select ${error && !locationParts.cell ? 'error' : ''}`}
-              value={locationParts.cell}
-              onChange={(e) => onChange({ 
-                ...locationParts, 
-                cell: e.target.value, 
-                village: ""
-              })}
-              disabled={!locationParts.sector}
-            >
-              <option value="">{t('select_cell')}</option>
-              {cells.map(cell => (
-                <option key={cell.name} value={cell.name}>{cell.name}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="location-row">
-            <select
-              className={`location-select ${error && !locationParts.village ? 'error' : ''}`}
-              value={locationParts.village}
-              onChange={(e) => onChange({ 
-                ...locationParts, 
-                village: e.target.value
-              })}
-              disabled={!locationParts.cell}
-            >
-              <option value="">{t('select_village')}</option>
-              {villages.map(village => (
-                <option key={village.name} value={village.name}>{village.name}</option>
-              ))}
-            </select>
-          </div>
-        </>
-      )}
-    </div>
-  );
+            {/* Live preview of combined location string */}
+            {(locationParts.province || locationParts.district || locationParts.sector) && (
+                <div className="location-preview">
+                    <MapPin size={13} />
+                    <span>{buildLocationString(locationParts)}</span>
+                </div>
+            )}
+        </div>
+    );
 }
 
-function StockCard({ stock, onView, onEdit, onDelete, t }) {
-  const qualityGrade = qualityGrades.find(g => g.value === stock.quality_grade) || qualityGrades[1];
-  
-  const getStockStatus = (quantity) => {
-    if (quantity < 100) return { label: t('low_stock'), color: "#c62828", bg: "#ffebee" };
-    if (quantity < 500) return { label: t('medium_stock'), color: "#b45309", bg: "#fff7ed" };
-    return { label: t('high_stock'), color: "#2e7d32", bg: "#e8f5e9" };
-  };
+function StockCard({ stock, onView, onEdit, onDelete, onAddMovement, t }) {
+    const qualityGrade = qualityGrades.find(g => g.value === stock.quality_grade) || qualityGrades[1];
 
-  const status = getStockStatus(stock.quantity);
+    const getStockStatus = (quantity) => {
+        if (quantity < 100) return { label: t('low_stock'), color: "#c62828", bg: "#ffebee" };
+        if (quantity < 500) return { label: t('medium_stock'), color: "#b45309", bg: "#fff7ed" };
+        return { label: t('high_stock'), color: "#2e7d32", bg: "#e8f5e9" };
+    };
 
-  return (
-    <div className="stock-card">
-      <div className="stock-card-header">
-        <div className="stock-card-title">
-          <h3>{stock.product_name}</h3>
-          <span className="stock-id">#{stock.id}</span>
+    const status = getStockStatus(stock.quantity);
+
+    return (
+        <div className="stock-card">
+            <div className="stock-card-header">
+                <div className="stock-card-title">
+                    <h3>{stock.product_name}</h3>
+                    <span className="stock-id">#{stock.id}</span>
+                </div>
+                <div className="stock-card-actions">
+                    <button className="stock-action-btn" onClick={() => onView(stock)} title={t('view_details')}>
+                        <Eye size={16} />
+                    </button>
+                    <button className="stock-action-btn" onClick={() => onEdit(stock)} title={t('edit')}>
+                        <Edit2 size={16} />
+                    </button>
+                    <button className="stock-action-btn delete" onClick={() => onDelete(stock.id)} title={t('delete')}>
+                        <Trash2 size={16} />
+                    </button>
+                </div>
+            </div>
+
+            <div className="stock-card-body">
+                <div className="stock-quantity">
+                    <span className="quantity-value">{stock.quantity}</span>
+                    <span className="quantity-unit">kg</span>
+                    {stock.price_per_kg && (
+                        <span className="price-tag">
+                            {Number(stock.price_per_kg).toLocaleString()} RWF/kg
+                        </span>
+                    )}
+                </div>
+
+                <div className="stock-badges">
+                    <span className="stock-badge" style={{ backgroundColor: qualityGrade.bg, color: qualityGrade.color }}>
+                        {qualityGrade.label}
+                    </span>
+                    <span className="stock-badge" style={{ backgroundColor: status.bg, color: status.color }}>
+                        {status.label}
+                    </span>
+                    {!stock.is_active && (
+                        <span className="stock-badge" style={{ backgroundColor: "#f1f5f9", color: "#64748b" }}>
+                            {t('inactive')}
+                        </span>
+                    )}
+                </div>
+
+                <div className="stock-location">
+                    <MapPin size={14} />
+                    <span>{stock.location?.location || stock.location}</span>
+                </div>
+
+                <div className="stock-stats">
+                    <div className="stock-stat">
+                        <Package size={14} />
+                        <span>{stock.movements_count || 0} {t('movements')}</span>
+                    </div>
+                    <div className="stock-stat">
+                        <Calendar size={14} />
+                        <span>{new Date(stock.created_at).toLocaleDateString()}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div className="stock-card-footer">
+                <button className="stock-footer-btn" onClick={() => onAddMovement(stock)}>
+                    <Plus size={14} />
+                    {t('add_movement')}
+                </button>
+            </div>
         </div>
-        <div className="stock-card-actions">
-          <button className="stock-action-btn" onClick={() => onView(stock)} title={t('view_details')}>
-            <Eye size={16} />
-          </button>
-          <button className="stock-action-btn" onClick={() => onEdit(stock)} title={t('edit')}>
-            <Edit2 size={16} />
-          </button>
-          <button className="stock-action-btn delete" onClick={() => onDelete(stock.id)} title={t('delete')}>
-            <Trash2 size={16} />
-          </button>
-        </div>
-      </div>
-
-      <div className="stock-card-body">
-        <div className="stock-quantity">
-          <span className="quantity-value">{stock.quantity}</span>
-          <span className="quantity-unit">kg</span>
-        </div>
-
-        <div className="stock-badges">
-          <span className="stock-badge" style={{ backgroundColor: qualityGrade.bg, color: qualityGrade.color }}>
-            {qualityGrade.label}
-          </span>
-          <span className="stock-badge" style={{ backgroundColor: status.bg, color: status.color }}>
-            {status.label}
-          </span>
-          {!stock.is_active && (
-            <span className="stock-badge" style={{ backgroundColor: "#f1f5f9", color: "#64748b" }}>
-              {t('inactive')}
-            </span>
-          )}
-        </div>
-
-        <div className="stock-location">
-          <MapPin size={14} />
-          <span>{stock.location?.village}, {stock.location?.sector}</span>
-        </div>
-
-        <div className="stock-stats">
-          <div className="stock-stat">
-            <Package size={14} />
-            <span>{stock.movements_count || 0} {t('movements')}</span>
-          </div>
-          <div className="stock-stat">
-            <Calendar size={14} />
-            <span>{new Date(stock.created_at).toLocaleDateString()}</span>
-          </div>
-        </div>
-      </div>
-
-      <div className="stock-card-footer">
-        <button className="stock-footer-btn" onClick={() => onView(stock)}>
-          {t('view_movements')}
-        </button>
-      </div>
-    </div>
-  );
+    );
 }
 
 function MovementsTable({ movements, onView, onEdit, onDelete, t }) {
-  return (
-    <table className="movements-table">
-      <thead>
-        <tr>
-          <th>{t('date')}</th>
-          <th>{t('type')}</th>
-          <th>{t('quantity')}</th>
-          <th>{t('from_to')}</th>
-          <th>{t('reference')}</th>
-          <th>{t('created_by')}</th>
-          <th>{t('notes')}</th>
-          <th>{t('actions')}</th>
-        </tr>
-      </thead>
-      <tbody>
-        {movements.map(movement => {
-          const movementType = movementTypes.find(t => t.value === movement.movement_type) || movementTypes[0];
-          const MovementIcon = movementType.icon;
-          
-          return (
-            <tr key={movement.id}>
-              <td>
-                <div className="movement-date">
-                  {new Date(movement.created_at).toLocaleDateString()}
-                  <small>{new Date(movement.created_at).toLocaleTimeString()}</small>
-                </div>
-              </td>
-              <td>
-                <span className="movement-type-badge" style={{ backgroundColor: movementType.bg, color: movementType.color }}>
-                  <MovementIcon size={12} />
-                  {movementType.label}
-                </span>
-              </td>
-              <td className="movement-quantity">
-                <span style={{ color: movement.movement_type === 'out' ? '#c62828' : '#2e7d32' }}>
-                  {movement.movement_type === 'out' ? '-' : '+'}{movement.quantity} kg
-                </span>
-              </td>
-              <td>
-                {movement.movement_type === 'transfer' ? (
-                  <div className="movement-location">
-                    <div>From: {movement.from_location?.village}</div>
-                    <div>To: {movement.to_location?.village}</div>
-                  </div>
-                ) : (
-                  movement.from_location?.village || '-'
-                )}
-              </td>
-              <td>{movement.reference_number || '-'}</td>
-              <td>{movement.created_by_details?.full_name || '-'}</td>
-              <td>
-                <div className="movement-notes" title={movement.notes}>
-                  {movement.notes ? movement.notes.substring(0, 20) + (movement.notes.length > 20 ? '...' : '') : '-'}
-                </div>
-              </td>
-              <td>
-                <div className="movement-actions">
-                  <button className="movement-action-btn" onClick={() => onView(movement)} title={t('view')}>
-                    <Eye size={14} />
-                  </button>
-                  <button className="movement-action-btn" onClick={() => onEdit(movement)} title={t('edit')}>
-                    <Edit2 size={14} />
-                  </button>
-                  <button className="movement-action-btn delete" onClick={() => onDelete(movement.id)} title={t('delete')}>
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              </td>
-            </tr>
-          );
-        })}
-      </tbody>
-    </table>
-  );
+    return (
+        <table className="movements-table">
+            <thead>
+                <tr>
+                    <th>{t('date')}</th>
+                    <th>{t('type')}</th>
+                    <th>{t('quantity')}</th>
+                    <th>{t('notes')}</th>
+                    <th>{t('created_by')}</th>
+                    <th>{t('actions')}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {movements.map(movement => {
+                    const movementType = movementTypes.find(t => t.value === movement.movement_type) || movementTypes[0];
+                    const MovementIcon = movementType.icon;
+
+                    return (
+                        <tr key={movement.id}>
+                            <td>
+                                <div className="movement-date">
+                                    {new Date(movement.created_at).toLocaleDateString()}
+                                    <small>{new Date(movement.created_at).toLocaleTimeString()}</small>
+                                </div>
+                            </td>
+                            <td>
+                                <span className="movement-type-badge" style={{ backgroundColor: movementType.bg, color: movementType.color }}>
+                                    <MovementIcon size={12} />
+                                    {movementType.label}
+                                </span>
+                            </td>
+                            <td className="movement-quantity">
+                                <span style={{ color: movement.movement_type === 'out' ? '#c62828' : '#2e7d32' }}>
+                                    {movement.movement_type === 'out' ? '-' : '+'}{movement.quantity} kg
+                                </span>
+                            </td>
+                            <td>
+                                <div className="movement-notes" title={movement.notes}>
+                                    {movement.notes ? movement.notes.substring(0, 30) + (movement.notes.length > 30 ? '...' : '') : '-'}
+                                </div>
+                            </td>
+                            <td>{movement.created_by_details?.full_name || '-'}</td>
+                            <td>
+                                <div className="movement-actions">
+                                    <button className="movement-action-btn" onClick={() => onEdit(movement)} title={t('edit')}>
+                                        <Edit2 size={14} />
+                                    </button>
+                                    <button className="movement-action-btn delete" onClick={() => onDelete(movement.id)} title={t('delete')}>
+                                        <Trash2 size={14} />
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    );
+                })}
+            </tbody>
+        </table>
+    );
 }
 
 function AlertsList({ alerts, onResolve, t }) {
-  return (
-    <div className="alerts-list">
-      {alerts.map(alert => {
-        const severity = alertSeverities.find(s => s.value === alert.severity) || alertSeverities[2];
-        
-        return (
-          <div key={alert.id} className="alert-item" style={{ borderLeftColor: severity.color }}>
-            <div className="alert-icon" style={{ backgroundColor: severity.bg, color: severity.color }}>
-              <AlertCircle size={16} />
-            </div>
-            <div className="alert-content">
-              <div className="alert-header">
-                <span className="alert-type">{alert.alert_type}</span>
-                <span className="alert-severity" style={{ backgroundColor: severity.bg, color: severity.color }}>
-                  {severity.label}
-                </span>
-              </div>
-              <p className="alert-message">{alert.message}</p>
-              <div className="alert-footer">
-                <span className="alert-date">{new Date(alert.created_at).toLocaleDateString()}</span>
-                {!alert.is_resolved && (
-                  <button className="alert-resolve-btn" onClick={() => onResolve(alert.id)}>
-                    <Check size={14} />
-                    {t('resolve')}
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
+    return (
+        <div className="alerts-list">
+            {alerts.map(alert => {
+                const severity = alertSeverities.find(s => s.value === alert.severity) || alertSeverities[2];
+
+                return (
+                    <div key={alert.id} className="alert-item" style={{ borderLeftColor: severity.color }}>
+                        <div className="alert-icon" style={{ backgroundColor: severity.bg, color: severity.color }}>
+                            <AlertCircle size={16} />
+                        </div>
+                        <div className="alert-content">
+                            <div className="alert-header">
+                                <span className="alert-type">{alert.alert_type}</span>
+                                <span className="alert-severity" style={{ backgroundColor: severity.bg, color: severity.color }}>
+                                    {severity.label}
+                                </span>
+                            </div>
+                            <p className="alert-message">{alert.message}</p>
+                            <div className="alert-footer">
+                                <span className="alert-date">{new Date(alert.created_at).toLocaleDateString()}</span>
+                                {!alert.is_resolved && (
+                                    <button className="alert-resolve-btn" onClick={() => onResolve(alert.id)}>
+                                        <Check size={14} />
+                                        {t('resolve')}
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                );
+            })}
+        </div>
+    );
 }
 
 function StockDetailModal({ stock, onClose, onAddMovement, onEditMovement, onDeleteMovement, t }) {
-  const [activeTab, setActiveTab] = useState('movements');
-  const [movements, setMovements] = useState([]);
-  const [movementsLoading, setMovementsLoading] = useState(false);
-  const [movementFilters, setMovementFilters] = useState({ type: '', from_date: '', to_date: '' });
-  const [movementPage, setMovementPage] = useState(1);
-  const [movementPageSize, setMovementPageSize] = useState(10);
-  const [movementTotal, setMovementTotal] = useState(0);
-  const abortControllerRef = useRef(null);
+    const [activeTab, setActiveTab] = useState('movements');
+    const [movements, setMovements] = useState([]);
+    const [movementsLoading, setMovementsLoading] = useState(false);
+    const [movementFilters, setMovementFilters] = useState({ type: '', from_date: '', to_date: '' });
+    const [movementPage, setMovementPage] = useState(1);
+    const [movementPageSize, setMovementPageSize] = useState(10);
+    const [movementTotal, setMovementTotal] = useState(0);
+    const abortControllerRef = useRef(null);
 
-  const fetchMovements = useCallback(async () => {
-    if (abortControllerRef.current) abortControllerRef.current.abort();
-    abortControllerRef.current = new AbortController();
+    const fetchMovements = useCallback(async () => {
+        if (abortControllerRef.current) abortControllerRef.current.abort();
+        abortControllerRef.current = new AbortController();
 
-    try {
-      setMovementsLoading(true);
-      
-      const params = new URLSearchParams({
-        page: movementPage,
-        page_size: movementPageSize,
-        ...(movementFilters.type && { type: movementFilters.type }),
-        ...(movementFilters.from_date && { from_date: movementFilters.from_date }),
-        ...(movementFilters.to_date && { to_date: movementFilters.to_date })
-      });
+        try {
+            setMovementsLoading(true);
 
-      const response = await apiClient.get(`/farmer/stocks/${stock.id}/movements/?${params}`, {
-        signal: abortControllerRef.current.signal
-      });
+            const params = new URLSearchParams({
+                page: movementPage,
+                page_size: movementPageSize,
+                ...(movementFilters.type && { type: movementFilters.type }),
+                ...(movementFilters.from_date && { from_date: movementFilters.from_date }),
+                ...(movementFilters.to_date && { to_date: movementFilters.to_date })
+            });
 
-      if (response.data) {
-        setMovements(response.data.movements || []);
-        setMovementTotal(response.data.total || 0);
-      }
-    } catch (error) {
-      if (error.name === 'AbortError' || error.code === 'ERR_CANCELED') return;
-      console.error('Error fetching movements:', error);
-      toast.error(t('failed_to_fetch_movements'));
-    } finally {
-      setMovementsLoading(false);
-    }
-  }, [stock.id, movementPage, movementPageSize, movementFilters, t]);
+            const response = await apiClient.get(`/farmer/stocks/${stock.id}/movements/?${params}`, {
+                signal: abortControllerRef.current.signal
+            });
 
-  useEffect(() => {
-    fetchMovements();
-    return () => {
-      if (abortControllerRef.current) abortControllerRef.current.abort();
+            if (response.data) {
+                setMovements(response.data.movements || []);
+                setMovementTotal(response.data.total || 0);
+            }
+        } catch (error) {
+            if (error.name === 'AbortError' || error.code === 'ERR_CANCELED') return;
+            console.error('Error fetching movements:', error);
+            toast.error(t('failed_to_fetch_movements'));
+        } finally {
+            setMovementsLoading(false);
+        }
+    }, [stock.id, movementPage, movementPageSize, movementFilters, t]);
+
+    useEffect(() => {
+        fetchMovements();
+        return () => {
+            if (abortControllerRef.current) abortControllerRef.current.abort();
+        };
+    }, [fetchMovements]);
+
+    const handleMovementFilterChange = (key, value) => {
+        setMovementFilters(prev => ({ ...prev, [key]: value }));
+        setMovementPage(1);
     };
-  }, [fetchMovements]);
 
-  const handleMovementFilterChange = (key, value) => {
-    setMovementFilters(prev => ({ ...prev, [key]: value }));
-    setMovementPage(1);
-  };
-
-  return (
-    <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="modal stock-detail-modal">
-        <div className="modal-header">
-          <div>
-            <h2>{stock.product_name}</h2>
-            <p className="stock-location-header">{stock.location?.full}</p>
-          </div>
-          <button className="modal-close" onClick={onClose}><X size={18} /></button>
-        </div>
-
-        <div className="stock-detail-summary">
-          <div className="summary-item">
-            <span className="summary-label">{t('current_quantity')}</span>
-            <span className="summary-value">{stock.quantity} kg</span>
-          </div>
-          <div className="summary-item">
-            <span className="summary-label">{t('quality_grade')}</span>
-            <span className="summary-value">
-              <span className="quality-badge" style={{ 
-                backgroundColor: qualityGrades.find(g => g.value === stock.quality_grade)?.bg,
-                color: qualityGrades.find(g => g.value === stock.quality_grade)?.color
-              }}>
-                {qualityGrades.find(g => g.value === stock.quality_grade)?.label}
-              </span>
-            </span>
-          </div>
-          <div className="summary-item">
-            <span className="summary-label">{t('total_movements')}</span>
-            <span className="summary-value">{stock.movements_count}</span>
-          </div>
-          <div className="summary-item">
-            <span className="summary-label">{t('status')}</span>
-            <span className="summary-value">
-              <span className="status-badge" style={{
-                backgroundColor: stock.is_active ? '#e8f5e9' : '#ffebee',
-                color: stock.is_active ? '#2e7d32' : '#c62828'
-              }}>
-                {stock.is_active ? t('active') : t('inactive')}
-              </span>
-            </span>
-          </div>
-        </div>
-
-        <div className="stock-detail-tabs">
-          <button 
-            className={`tab-btn ${activeTab === 'movements' ? 'active' : ''}`}
-            onClick={() => setActiveTab('movements')}
-          >
-            <Activity size={16} />
-            {t('movements')}
-          </button>
-          <button 
-            className={`tab-btn ${activeTab === 'statistics' ? 'active' : ''}`}
-            onClick={() => setActiveTab('statistics')}
-          >
-            <BarChart2 size={16} />
-            {t('statistics')}
-          </button>
-          <button 
-            className={`tab-btn ${activeTab === 'alerts' ? 'active' : ''}`}
-            onClick={() => setActiveTab('alerts')}
-          >
-            <AlertCircle size={16} />
-            {t('alerts')}
-          </button>
-        </div>
-
-        <div className="stock-detail-content">
-          {activeTab === 'movements' && (
-            <>
-              <div className="movements-filter-bar">
-                <select
-                  className="filter-select"
-                  value={movementFilters.type}
-                  onChange={(e) => handleMovementFilterChange('type', e.target.value)}
-                >
-                  <option value="">{t('all_types')}</option>
-                  {movementTypes.map(type => (
-                    <option key={type.value} value={type.value}>{type.label}</option>
-                  ))}
-                </select>
-
-                <input
-                  type="date"
-                  className="filter-date"
-                  value={movementFilters.from_date}
-                  onChange={(e) => handleMovementFilterChange('from_date', e.target.value)}
-                  placeholder={t('from_date')}
-                />
-
-                <input
-                  type="date"
-                  className="filter-date"
-                  value={movementFilters.to_date}
-                  onChange={(e) => handleMovementFilterChange('to_date', e.target.value)}
-                  placeholder={t('to_date')}
-                />
-
-                <button className="add-movement-btn" onClick={() => onAddMovement(stock)}>
-                  <Plus size={16} />
-                  {t('add_movement')}
-                </button>
-              </div>
-
-              {movementsLoading ? (
-                <LoadingSpinner />
-              ) : movements.length === 0 ? (
-                <div className="empty-state">
-                  <Package size={48} />
-                  <p>{t('no_movements_found')}</p>
-                </div>
-              ) : (
-                <>
-                  <div className="table-wrapper">
-                    <MovementsTable
-                      movements={movements}
-                      onView={() => {}}
-                      onEdit={onEditMovement}
-                      onDelete={onDeleteMovement}
-                      t={t}
-                    />
-                  </div>
-
-                  <Pagination
-                    currentPage={movementPage}
-                    totalPages={Math.ceil(movementTotal / movementPageSize)}
-                    onPageChange={setMovementPage}
-                    pageSize={movementPageSize}
-                    onPageSizeChange={setMovementPageSize}
-                    totalItems={movementTotal}
-                  />
-                </>
-              )}
-            </>
-          )}
-
-          {activeTab === 'statistics' && (
-            <div className="statistics-content">
-              <div className="stats-grid">
-                <div className="stat-card">
-                  <h4>{t('movement_summary')}</h4>
-                  <div className="stat-row">
-                    <span>{t('total_in')}:</span>
-                    <span className="stat-value positive">+{stock.total_movements_in || 0} kg</span>
-                  </div>
-                  <div className="stat-row">
-                    <span>{t('total_out')}:</span>
-                    <span className="stat-value negative">-{stock.total_movements_out || 0} kg</span>
-                  </div>
-                  <div className="stat-row total">
-                    <span>{t('net_change')}:</span>
-                    <span className={`stat-value ${(stock.total_movements_in - stock.total_movements_out) >= 0 ? 'positive' : 'negative'}`}>
-                      {(stock.total_movements_in - stock.total_movements_out) >= 0 ? '+' : ''}
-                      {stock.total_movements_in - stock.total_movements_out} kg
-                    </span>
-                  </div>
+    return (
+        <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
+            <div className="modal stock-detail-modal">
+                <div className="modal-header">
+                    <div>
+                        <h2>{stock.product_name}</h2>
+                        <p className="stock-location-header">{stock.location?.location || stock.location}</p>
+                    </div>
+                    <button className="modal-close" onClick={onClose}><X size={18} /></button>
                 </div>
 
-                <div className="stat-card">
-                  <h4>{t('stock_value')}</h4>
-                  <div className="stat-row">
-                    <span>{t('estimated_value')}:</span>
-                    <span className="stat-value">{stock.current_value?.estimated?.toLocaleString()} RWF</span>
-                  </div>
-                  <div className="stat-row">
-                    <span>{t('price_per_kg')}:</span>
-                    <span className="stat-value">1,000 RWF</span>
-                  </div>
+                <div className="stock-detail-summary">
+                    <div className="summary-item">
+                        <span className="summary-label">{t('current_quantity')}</span>
+                        <span className="summary-value">{stock.quantity} kg</span>
+                    </div>
+                    <div className="summary-item">
+                        <span className="summary-label">{t('price_per_kg')}</span>
+                        <span className="summary-value">
+                            {stock.price_per_kg
+                                ? `${Number(stock.price_per_kg).toLocaleString()} RWF`
+                                : '-'}
+                        </span>
+                    </div>
+                    <div className="summary-item">
+                        <span className="summary-label">{t('quality_grade')}</span>
+                        <span className="summary-value">
+                            <span className="quality-badge" style={{
+                                backgroundColor: qualityGrades.find(g => g.value === stock.quality_grade)?.bg,
+                                color: qualityGrades.find(g => g.value === stock.quality_grade)?.color
+                            }}>
+                                {qualityGrades.find(g => g.value === stock.quality_grade)?.label}
+                            </span>
+                        </span>
+                    </div>
+                    <div className="summary-item">
+                        <span className="summary-label">{t('total_movements')}</span>
+                        <span className="summary-value">{stock.movements_count}</span>
+                    </div>
+                    <div className="summary-item">
+                        <span className="summary-label">{t('status')}</span>
+                        <span className="summary-value">
+                            <span className="status-badge" style={{
+                                backgroundColor: stock.is_active ? '#e8f5e9' : '#ffebee',
+                                color: stock.is_active ? '#2e7d32' : '#c62828'
+                            }}>
+                                {stock.is_active ? t('active') : t('inactive')}
+                            </span>
+                        </span>
+                    </div>
                 </div>
 
-                <div className="stat-card">
-                  <h4>{t('movement_frequency')}</h4>
-                  <div className="stat-row">
-                    <span>{t('avg_daily')}:</span>
-                    <span className="stat-value">
-                      {(stock.movements_count / 30).toFixed(1)} {t('per_day')}
-                    </span>
-                  </div>
+                <div className="stock-detail-tabs">
+                    <button
+                        className={`tab-btn ${activeTab === 'movements' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('movements')}
+                    >
+                        <Activity size={16} />
+                        {t('movements')}
+                    </button>
+                    <button
+                        className={`tab-btn ${activeTab === 'statistics' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('statistics')}
+                    >
+                        <BarChart2 size={16} />
+                        {t('statistics')}
+                    </button>
+                    <button
+                        className={`tab-btn ${activeTab === 'alerts' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('alerts')}
+                    >
+                        <AlertCircle size={16} />
+                        {t('alerts')}
+                    </button>
                 </div>
-              </div>
+
+                <div className="stock-detail-content">
+                    {activeTab === 'movements' && (
+                        <>
+                            <div className="movements-filter-bar">
+                                <select
+                                    className="filter-select"
+                                    value={movementFilters.type}
+                                    onChange={(e) => handleMovementFilterChange('type', e.target.value)}
+                                >
+                                    <option value="">{t('all_types')}</option>
+                                    {movementTypes.map(type => (
+                                        <option key={type.value} value={type.value}>{type.label}</option>
+                                    ))}
+                                </select>
+
+                                <input
+                                    type="date"
+                                    className="filter-date"
+                                    value={movementFilters.from_date}
+                                    onChange={(e) => handleMovementFilterChange('from_date', e.target.value)}
+                                    placeholder={t('from_date')}
+                                />
+
+                                <input
+                                    type="date"
+                                    className="filter-date"
+                                    value={movementFilters.to_date}
+                                    onChange={(e) => handleMovementFilterChange('to_date', e.target.value)}
+                                    placeholder={t('to_date')}
+                                />
+
+                                <button
+                                    className="add-movement-btn"
+                                    onClick={() => {
+                                        onAddMovement(stock);
+                                    }}
+                                >
+                                    <Plus size={16} />
+                                    {t('add_movement')}
+                                </button>
+                            </div>
+
+                            {movementsLoading ? (
+                                <LoadingSpinner />
+                            ) : movements.length === 0 ? (
+                                <div className="empty-state">
+                                    <Package size={48} />
+                                    <p>{t('no_movements_found')}</p>
+                                </div>
+                            ) : (
+                                <>
+                                    <div className="table-wrapper">
+                                        <MovementsTable
+                                            movements={movements}
+                                            onView={() => { }}
+                                            onEdit={onEditMovement}
+                                            onDelete={onDeleteMovement}
+                                            t={t}
+                                        />
+                                    </div>
+
+                                    <Pagination
+                                        currentPage={movementPage}
+                                        totalPages={Math.ceil(movementTotal / movementPageSize)}
+                                        onPageChange={setMovementPage}
+                                        pageSize={movementPageSize}
+                                        onPageSizeChange={setMovementPageSize}
+                                        totalItems={movementTotal}
+                                    />
+                                </>
+                            )}
+                        </>
+                    )}
+
+                    {activeTab === 'statistics' && (
+                        <div className="statistics-content">
+                            <div className="stats-grid">
+                                <div className="stat-card">
+                                    <h4>{t('movement_summary')}</h4>
+                                    <div className="stat-row">
+                                        <span>{t('total_in')}:</span>
+                                        <span className="stat-value positive">+{stock.total_movements_in || 0} kg</span>
+                                    </div>
+                                    <div className="stat-row">
+                                        <span>{t('total_out')}:</span>
+                                        <span className="stat-value negative">-{stock.total_movements_out || 0} kg</span>
+                                    </div>
+                                    <div className="stat-row total">
+                                        <span>{t('net_change')}:</span>
+                                        <span className={`stat-value ${(stock.total_movements_in - stock.total_movements_out) >= 0 ? 'positive' : 'negative'}`}>
+                                            {(stock.total_movements_in - stock.total_movements_out) >= 0 ? '+' : ''}
+                                            {stock.total_movements_in - stock.total_movements_out} kg
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div className="stat-card">
+                                    <h4>{t('stock_value')}</h4>
+                                    <div className="stat-row">
+                                        <span>{t('estimated_value')}:</span>
+                                        <span className="stat-value">{stock.current_value?.estimated?.toLocaleString()} RWF</span>
+                                    </div>
+                                    <div className="stat-row">
+                                        <span>{t('price_per_kg')}:</span>
+                                        <span className="stat-value">
+                                            {stock.price_per_kg
+                                                ? `${Number(stock.price_per_kg).toLocaleString()} RWF`
+                                                : '1,000 RWF (default)'}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div className="stat-card">
+                                    <h4>{t('movement_frequency')}</h4>
+                                    <div className="stat-row">
+                                        <span>{t('avg_daily')}:</span>
+                                        <span className="stat-value">
+                                            {(stock.movements_count / 30).toFixed(1)} {t('per_day')}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'alerts' && (
+                        <div className="alerts-content">
+                            {stock.alerts?.length > 0 ? (
+                                <AlertsList alerts={stock.alerts} onResolve={() => { }} t={t} />
+                            ) : (
+                                <div className="empty-state">
+                                    <CheckCircle size={48} color="#2e7d32" />
+                                    <p>{t('no_alerts')}</p>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
             </div>
-          )}
-
-          {activeTab === 'alerts' && (
-            <div className="alerts-content">
-              {stock.alerts?.length > 0 ? (
-                <AlertsList alerts={stock.alerts} onResolve={() => {}} t={t} />
-              ) : (
-                <div className="empty-state">
-                  <CheckCircle size={48} color="#2e7d32" />
-                  <p>{t('no_alerts')}</p>
-                </div>
-              )}
-            </div>
-          )}
         </div>
-      </div>
-    </div>
-  );
+    );
 }
 
-function MovementFormModal({ isOpen, onClose, onSubmit, stock, editingMovement, t }) {
-  const [form, setForm] = useState(emptyMovementForm);
-  const [errors, setErrors] = useState({});
-  const [submitting, setSubmitting] = useState(false);
+function MovementFormModal({ isOpen, onClose, onSubmit, stock, editingMovement, t, isSubmitting }) {
+    const [form, setForm] = useState(emptyMovementForm);
+    const [errors, setErrors] = useState({});
 
-  useEffect(() => {
-    if (editingMovement) {
-      setForm({
-        stock: editingMovement.stock,
-        movement_type: editingMovement.movement_type,
-        quantity: editingMovement.quantity,
-        to_province: editingMovement.to_province || "",
-        to_district: editingMovement.to_district || "",
-        to_sector: editingMovement.to_sector || "",
-        to_cell: editingMovement.to_cell || "",
-        to_village: editingMovement.to_village || "",
-        reference_number: editingMovement.reference_number || "",
-        notes: editingMovement.notes || ""
-      });
-    } else {
-      setForm({
-        ...emptyMovementForm,
-        stock: stock?.id || ""
-      });
-    }
-  }, [editingMovement, stock]);
+    useEffect(() => {
+        if (editingMovement) {
+            setForm({
+                stock: editingMovement.stock,
+                movement_type: editingMovement.movement_type,
+                quantity: editingMovement.quantity,
+                notes: editingMovement.notes || ""
+            });
+        } else {
+            setForm({
+                ...emptyMovementForm,
+                stock: stock?.id || ""
+            });
+        }
+    }, [editingMovement, stock]);
 
-  const handleChange = (key, value) => {
-    setForm(prev => ({ ...prev, [key]: value }));
-    if (errors[key]) {
-      setErrors(prev => ({ ...prev, [key]: null }));
-    }
-  };
+    const handleChange = (key, value) => {
+        setForm(prev => ({ ...prev, [key]: value }));
+        if (errors[key]) {
+            setErrors(prev => ({ ...prev, [key]: null }));
+        }
+    };
 
-  const handleLocationChange = (locationParts) => {
-    setForm(prev => ({
-      ...prev,
-      to_province: locationParts.province || "",
-      to_district: locationParts.district || "",
-      to_sector: locationParts.sector || "",
-      to_cell: locationParts.cell || "",
-      to_village: locationParts.village || ""
-    }));
-  };
+    const validateForm = () => {
+        const newErrors = {};
 
-  const validateForm = () => {
-    const newErrors = {};
+        if (!form.quantity) {
+            newErrors.quantity = t('quantity_required');
+        } else if (parseFloat(form.quantity) <= 0) {
+            newErrors.quantity = t('quantity_positive');
+        }
 
-    if (!form.quantity) {
-      newErrors.quantity = t('quantity_required');
-    } else if (parseFloat(form.quantity) <= 0) {
-      newErrors.quantity = t('quantity_positive');
-    }
+        // For 'out' movements, check against current stock quantity
+        if (form.movement_type === 'out' && stock) {
+            const currentQty = parseFloat(stock.quantity);
+            const movementQty = parseFloat(form.quantity);
+            if (movementQty > currentQty) {
+                newErrors.quantity = t('insufficient_stock', { available: currentQty });
+            }
+        }
 
-    if (form.movement_type === 'transfer') {
-      if (!form.to_province) newErrors.to_province = t('province_required');
-      if (!form.to_district) newErrors.to_district = t('district_required');
-      if (!form.to_sector) newErrors.to_sector = t('sector_required');
-      if (!form.to_cell) newErrors.to_cell = t('cell_required');
-      if (!form.to_village) newErrors.to_village = t('village_required');
-    }
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    };
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+    const handleSubmit = async () => {
+        if (!validateForm()) return;
+        if (!stock) {
+            console.error('No stock selected for movement');
+            return;
+        }
 
-  const handleSubmit = async () => {
-    if (!validateForm()) return;
+        try {
+            const payload = {
+                ...form,
+                stock: stock.id
+            };
+            await onSubmit(payload);
+        } catch (error) {
+            console.error('Error submitting movement:', error);
+        }
+    };
 
-    setSubmitting(true);
-    try {
-      await onSubmit(form);
-      onClose();
-    } catch (error) {
-      console.error('Error submitting movement:', error);
-    } finally {
-      setSubmitting(false);
-    }
-  };
+    if (!isOpen) return null;
 
-  if (!isOpen) return null;
+    const MovementIcon = movementTypes.find(t => t.value === form.movement_type)?.icon || ArrowDown;
 
-  const locationParts = {
-    province: form.to_province,
-    district: form.to_district,
-    sector: form.to_sector,
-    cell: form.to_cell,
-    village: form.to_village
-  };
+    return (
+        <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
+            <div className="modal movement-form-modal">
+                <div className="modal-header">
+                    <div>
+                        <h2>{editingMovement ? t('edit_movement') : t('add_movement')}</h2>
+                        <p>
+                            {stock?.product_name} - {t('current_quantity')}: {stock?.quantity} kg
+                        </p>
+                    </div>
+                    <button className="modal-close" onClick={onClose}><X size={18} /></button>
+                </div>
 
-  const MovementIcon = movementTypes.find(t => t.value === form.movement_type)?.icon || ArrowDown;
+                <div className="modal-body">
+                    <div className="form-group">
+                        <label>{t('movement_type')} *</label>
+                        <div className="movement-type-selector">
+                            {movementTypes.map(type => {
+                                const TypeIcon = type.icon;
+                                return (
+                                    <button
+                                        key={type.value}
+                                        className={`type-btn ${form.movement_type === type.value ? 'active' : ''}`}
+                                        style={{
+                                            backgroundColor: form.movement_type === type.value ? type.bg : '#f8fafc',
+                                            color: form.movement_type === type.value ? type.color : '#64748b'
+                                        }}
+                                        onClick={() => handleChange('movement_type', type.value)}
+                                    >
+                                        <TypeIcon size={16} />
+                                        {type.label}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
 
-  return (
-    <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="modal movement-form-modal">
-        <div className="modal-header">
-          <div>
-            <h2>{editingMovement ? t('edit_movement') : t('add_movement')}</h2>
-            <p>{stock?.product_name} - {t('current_quantity')}: {stock?.quantity} kg</p>
-          </div>
-          <button className="modal-close" onClick={onClose}><X size={18} /></button>
-        </div>
+                    <div className="form-group">
+                        <label>{t('quantity')} (kg) *</label>
+                        <input
+                            type="number"
+                            step="0.01"
+                            min="0.01"
+                            max={form.movement_type === 'out' ? stock?.quantity : undefined}
+                            className={`form-control ${errors.quantity ? 'error' : ''}`}
+                            value={form.quantity}
+                            onChange={(e) => handleChange('quantity', e.target.value)}
+                            placeholder="0.00"
+                        />
+                        {errors.quantity && <div className="error-message">{errors.quantity}</div>}
+                        {form.movement_type === 'out' && stock && (
+                            <div className="field-hint">
+                                {t('max_available')}: {stock.quantity} kg
+                            </div>
+                        )}
+                    </div>
 
-        <div className="modal-body">
-          <div className="form-group">
-            <label>{t('movement_type')} *</label>
-            <div className="movement-type-selector">
-              {movementTypes.map(type => {
-                const TypeIcon = type.icon;
-                return (
-                  <button
-                    key={type.value}
-                    className={`type-btn ${form.movement_type === type.value ? 'active' : ''}`}
-                    style={{
-                      backgroundColor: form.movement_type === type.value ? type.bg : '#f8fafc',
-                      color: form.movement_type === type.value ? type.color : '#64748b'
-                    }}
-                    onClick={() => handleChange('movement_type', type.value)}
-                  >
-                    <TypeIcon size={16} />
-                    {type.label}
-                  </button>
-                );
-              })}
+                    <div className="form-group">
+                        <label>{t('notes')}</label>
+                        <textarea
+                            className="form-control"
+                            rows="3"
+                            value={form.notes}
+                            onChange={(e) => handleChange('notes', e.target.value)}
+                            placeholder={t('reason_for_movement')}
+                        />
+                    </div>
+                </div>
+
+                <div className="modal-footer">
+                    <button className="btn-cancel" onClick={onClose} disabled={isSubmitting}>
+                        {t('cancel')}
+                    </button>
+                    <button className="btn-save" onClick={handleSubmit} disabled={isSubmitting}>
+                        {isSubmitting ? t('saving') : (editingMovement ? t('update') : t('create'))}
+                    </button>
+                </div>
             </div>
-          </div>
-
-          <div className="form-group">
-            <label>{t('quantity')} (kg) *</label>
-            <input
-              type="number"
-              step="0.01"
-              min="0.01"
-              className={`form-control ${errors.quantity ? 'error' : ''}`}
-              value={form.quantity}
-              onChange={(e) => handleChange('quantity', e.target.value)}
-              placeholder="0.00"
-            />
-            {errors.quantity && <div className="error-message">{errors.quantity}</div>}
-          </div>
-
-          {form.movement_type === 'transfer' && (
-            <div className="form-group">
-              <label>{t('destination_location')} *</label>
-              <LocationSelector
-                locationParts={locationParts}
-                onChange={handleLocationChange}
-                error={Object.keys(errors).some(k => k.startsWith('to_'))}
-                isTransfer={true}
-              />
-            </div>
-          )}
-
-          <div className="form-group">
-            <label>{t('reference_number')}</label>
-            <input
-              type="text"
-              className="form-control"
-              value={form.reference_number}
-              onChange={(e) => handleChange('reference_number', e.target.value)}
-              placeholder={t('invoice_order_number')}
-            />
-          </div>
-
-          <div className="form-group">
-            <label>{t('notes')}</label>
-            <textarea
-              className="form-control"
-              rows="3"
-              value={form.notes}
-              onChange={(e) => handleChange('notes', e.target.value)}
-              placeholder={t('additional_notes')}
-            />
-          </div>
         </div>
-
-        <div className="modal-footer">
-          <button className="btn-cancel" onClick={onClose} disabled={submitting}>
-            {t('cancel')}
-          </button>
-          <button className="btn-save" onClick={handleSubmit} disabled={submitting}>
-            {submitting ? t('saving') : (editingMovement ? t('update') : t('create'))}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
+    );
 }
 
+// ─── Stock Form Modal ─────────────────────────────────────────────────────────
 function StockFormModal({ isOpen, onClose, onSubmit, editingStock, t }) {
-  const [form, setForm] = useState(emptyStockForm);
-  const [errors, setErrors] = useState({});
-  const [submitting, setSubmitting] = useState(false);
+    const [form, setForm] = useState(emptyStockForm);
+    const [errors, setErrors] = useState({});
+    const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    if (editingStock) {
-      setForm({
-        product_name: editingStock.product_name || "",
-        quantity: editingStock.quantity || "",
-        quality_grade: editingStock.quality_grade || "B",
-        province: editingStock.province || "",
-        district: editingStock.district || "",
-        sector: editingStock.sector || "",
-        cell: editingStock.cell || "",
-        village: editingStock.village || "",
-        description: editingStock.description || "",
-        is_active: editingStock.is_active !== undefined ? editingStock.is_active : true
-      });
-    } else {
-      setForm(emptyStockForm);
-    }
-  }, [editingStock]);
+    useEffect(() => {
+        if (editingStock) {
+            // Parse the location string back into its parts
+            const locationString = editingStock.location?.location || editingStock.location || "";
+            const locationParts = parseLocationString(locationString);
 
-  const handleChange = (key, value) => {
-    setForm(prev => ({ ...prev, [key]: value }));
-    if (errors[key]) {
-      setErrors(prev => ({ ...prev, [key]: null }));
-    }
-  };
+            setForm({
+                product_name: editingStock.product_name || "",
+                quantity: editingStock.quantity || "",
+                price_per_kg: editingStock.price_per_kg || "",
+                quality_grade: editingStock.quality_grade || "B",
+                province: locationParts.province,
+                district: locationParts.district,
+                sector: locationParts.sector,
+                description: editingStock.description || "",
+                is_active: editingStock.is_active !== undefined ? editingStock.is_active : true
+            });
+        } else {
+            setForm(emptyStockForm);
+        }
+    }, [editingStock]);
 
-  const handleLocationChange = (locationParts) => {
-    setForm(prev => ({
-      ...prev,
-      province: locationParts.province || "",
-      district: locationParts.district || "",
-      sector: locationParts.sector || "",
-      cell: locationParts.cell || "",
-      village: locationParts.village || ""
-    }));
-  };
+    const handleChange = (key, value) => {
+        setForm(prev => ({ ...prev, [key]: value }));
+        if (errors[key]) {
+            setErrors(prev => ({ ...prev, [key]: null }));
+        }
+    };
 
-  const validateForm = () => {
-    const newErrors = {};
+    const handleLocationChange = (locationParts) => {
+        setForm(prev => ({
+            ...prev,
+            province: locationParts.province || "",
+            district: locationParts.district || "",
+            sector: locationParts.sector || "",
+        }));
+    };
 
-    if (!form.product_name.trim()) {
-      newErrors.product_name = t('product_name_required');
-    }
+    const validateForm = () => {
+        const newErrors = {};
 
-    if (!form.quantity) {
-      newErrors.quantity = t('quantity_required');
-    } else if (parseFloat(form.quantity) <= 0) {
-      newErrors.quantity = t('quantity_positive');
-    }
+        if (!form.product_name.trim()) {
+            newErrors.product_name = t('product_name_required');
+        }
 
-    if (!form.province) newErrors.province = t('province_required');
-    if (!form.district) newErrors.district = t('district_required');
-    if (!form.sector) newErrors.sector = t('sector_required');
+        if (!form.quantity) {
+            newErrors.quantity = t('quantity_required');
+        } else if (parseFloat(form.quantity) <= 0) {
+            newErrors.quantity = t('quantity_positive');
+        }
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+        if (form.price_per_kg !== "" && parseFloat(form.price_per_kg) < 0) {
+            newErrors.price_per_kg = t('price_positive') || 'Price must be a positive number';
+        }
 
-  const handleSubmit = async () => {
-    if (!validateForm()) return;
+        // Province, district, sector are required
+        if (!form.province) newErrors.province = t('province_required');
+        if (!form.district) newErrors.district = t('district_required');
+        if (!form.sector) newErrors.sector = t('sector_required');
 
-    setSubmitting(true);
-    try {
-      await onSubmit(form);
-      onClose();
-    } catch (error) {
-      console.error('Error submitting stock:', error);
-    } finally {
-      setSubmitting(false);
-    }
-  };
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    };
 
-  if (!isOpen) return null;
+    const handleSubmit = async () => {
+        if (!validateForm()) return;
 
-  const locationParts = {
-    province: form.province,
-    district: form.district,
-    sector: form.sector,
-    cell: form.cell,
-    village: form.village
-  };
+        setSubmitting(true);
+        try {
+            // Combine the individual location selectors into a single "location" field
+            const { province, district, sector, ...rest } = form;
+            const payload = {
+                ...rest,
+                location: buildLocationString({ province, district, sector }),
+                ...(form.price_per_kg !== "" && { price_per_kg: form.price_per_kg }),
+            };
 
-  return (
-    <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="modal stock-form-modal">
-        <div className="modal-header">
-          <div>
-            <h2>{editingStock ? t('edit_stock') : t('add_new_stock')}</h2>
-            <p>{editingStock ? t('update_stock_details') : t('fill_stock_details')}</p>
-          </div>
-          <button className="modal-close" onClick={onClose}><X size={18} /></button>
-        </div>
+            await onSubmit(payload);
+            onClose();
+        } catch (error) {
+            console.error('Error submitting stock:', error);
+        } finally {
+            setSubmitting(false);
+        }
+    };
 
-        <div className="modal-body">
-          <div className="form-group">
-            <label>{t('product_name')} *</label>
-            <input
-              type="text"
-              className={`form-control ${errors.product_name ? 'error' : ''}`}
-              value={form.product_name}
-              onChange={(e) => handleChange('product_name', e.target.value)}
-              placeholder={t('enter_product_name')}
-            />
-            {errors.product_name && <div className="error-message">{errors.product_name}</div>}
-          </div>
+    if (!isOpen) return null;
 
-          <div className="form-row">
-            <div className="form-group">
-              <label>{t('quantity')} (kg) *</label>
-              <input
-                type="number"
-                step="0.01"
-                min="0.01"
-                className={`form-control ${errors.quantity ? 'error' : ''}`}
-                value={form.quantity}
-                onChange={(e) => handleChange('quantity', e.target.value)}
-                placeholder="0.00"
-              />
-              {errors.quantity && <div className="error-message">{errors.quantity}</div>}
+    const locationParts = {
+        province: form.province,
+        district: form.district,
+        sector: form.sector
+    };
+
+    const hasLocationError = !!(errors.province || errors.district || errors.sector);
+
+    return (
+        <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
+            <div className="modal stock-form-modal">
+                <div className="modal-header">
+                    <div>
+                        <h2>{editingStock ? t('edit_stock') : t('add_new_stock')}</h2>
+                        <p>{editingStock ? t('update_stock_details') : t('fill_stock_details')}</p>
+                    </div>
+                    <button className="modal-close" onClick={onClose}><X size={18} /></button>
+                </div>
+
+                <div className="modal-body">
+                    {/* Product Name */}
+                    <div className="form-group">
+                        <label>{t('product_name')} *</label>
+                        <input
+                            type="text"
+                            className={`form-control ${errors.product_name ? 'error' : ''}`}
+                            value={form.product_name}
+                            onChange={(e) => handleChange('product_name', e.target.value)}
+                            placeholder={t('enter_product_name')}
+                        />
+                        {errors.product_name && <div className="error-message">{errors.product_name}</div>}
+                    </div>
+
+                    {/* Quantity + Quality Grade */}
+                    <div className="form-row">
+                        <div className="form-group">
+                            <label>{t('quantity')} (kg) *</label>
+                            <input
+                                type="number"
+                                step="0.01"
+                                min="0.01"
+                                className={`form-control ${errors.quantity ? 'error' : ''}`}
+                                value={form.quantity}
+                                onChange={(e) => handleChange('quantity', e.target.value)}
+                                placeholder="0.00"
+                            />
+                            {errors.quantity && <div className="error-message">{errors.quantity}</div>}
+                        </div>
+
+                        <div className="form-group">
+                            <label>{t('quality_grade')}</label>
+                            <select
+                                className="form-control"
+                                value={form.quality_grade}
+                                onChange={(e) => handleChange('quality_grade', e.target.value)}
+                            >
+                                {qualityGrades.map(grade => (
+                                    <option key={grade.value} value={grade.value}>{grade.label}</option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+
+                    {/* Price per Kg */}
+                    <div className="form-group">
+                        <label>
+                            {t('price_per_kg') || 'Price per Kg (RWF)'}
+                            <span className="field-hint"> — {t('optional') || 'optional'}</span>
+                        </label>
+                        <div className="price-input-wrapper">
+                            <span className="price-currency">RWF</span>
+                            <input
+                                type="number"
+                                step="1"
+                                min="0"
+                                className={`form-control price-input ${errors.price_per_kg ? 'error' : ''}`}
+                                value={form.price_per_kg}
+                                onChange={(e) => handleChange('price_per_kg', e.target.value)}
+                                placeholder="e.g. 1000"
+                            />
+                            <span className="price-unit">/ kg</span>
+                        </div>
+                        {errors.price_per_kg && <div className="error-message">{errors.price_per_kg}</div>}
+                        {form.price_per_kg && form.quantity && (
+                            <div className="price-estimate">
+                                Estimated total value:{" "}
+                                <strong>
+                                    {(parseFloat(form.price_per_kg || 0) * parseFloat(form.quantity || 0)).toLocaleString()} RWF
+                                </strong>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Location */}
+                    <div className="form-group">
+                        <label>{t('location')} *</label>
+                        <LocationSelector
+                            locationParts={locationParts}
+                            onChange={handleLocationChange}
+                            error={hasLocationError}
+                        />
+                        {hasLocationError && (
+                            <div className="error-message">
+                                {errors.province || errors.district || errors.sector}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Description */}
+                    <div className="form-group">
+                        <label>{t('description')}</label>
+                        <textarea
+                            className="form-control"
+                            rows="3"
+                            value={form.description}
+                            onChange={(e) => handleChange('description', e.target.value)}
+                            placeholder={t('enter_description')}
+                        />
+                    </div>
+
+                    {/* Status */}
+                    <div className="form-group">
+                        <label>{t('status')}</label>
+                        <select
+                            className="form-control"
+                            value={form.is_active ? 'true' : 'false'}
+                            onChange={(e) => handleChange('is_active', e.target.value === 'true')}
+                        >
+                            <option value="true">{t('active')}</option>
+                            <option value="false">{t('inactive')}</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div className="modal-footer">
+                    <button className="btn-cancel" onClick={onClose} disabled={submitting}>
+                        {t('cancel')}
+                    </button>
+                    <button className="btn-save" onClick={handleSubmit} disabled={submitting}>
+                        {submitting ? t('saving') : (editingStock ? t('update') : t('create'))}
+                    </button>
+                </div>
             </div>
-
-            <div className="form-group">
-              <label>{t('quality_grade')}</label>
-              <select
-                className="form-control"
-                value={form.quality_grade}
-                onChange={(e) => handleChange('quality_grade', e.target.value)}
-              >
-                {qualityGrades.map(grade => (
-                  <option key={grade.value} value={grade.value}>{grade.label}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div className="form-group">
-            <label>{t('location')} *</label>
-            <LocationSelector
-              locationParts={locationParts}
-              onChange={handleLocationChange}
-              error={errors.province || errors.district || errors.sector}
-              isTransfer={false}
-            />
-          </div>
-
-          <div className="form-group">
-            <label>{t('description')}</label>
-            <textarea
-              className="form-control"
-              rows="3"
-              value={form.description}
-              onChange={(e) => handleChange('description', e.target.value)}
-              placeholder={t('enter_description')}
-            />
-          </div>
-
-          <div className="form-group">
-            <label>{t('status')}</label>
-            <select
-              className="form-control"
-              value={form.is_active ? 'true' : 'false'}
-              onChange={(e) => handleChange('is_active', e.target.value === 'true')}
-            >
-              <option value="true">{t('active')}</option>
-              <option value="false">{t('inactive')}</option>
-            </select>
-          </div>
         </div>
-
-        <div className="modal-footer">
-          <button className="btn-cancel" onClick={onClose} disabled={submitting}>
-            {t('cancel')}
-          </button>
-          <button className="btn-save" onClick={handleSubmit} disabled={submitting}>
-            {submitting ? t('saving') : (editingStock ? t('update') : t('create'))}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
+    );
 }
+
+// ─── API Client ───────────────────────────────────────────────────────────────
+const apiClient = axios.create({ baseURL: API_BASE_URL, timeout: 30000 });
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function MyStockManagement() {
-  const { t } = useTranslation();
+    const { t } = useTranslation();
 
-  // ── Core state ──────────────────────────────────────────────────────────────
-  const [stocks, setStocks] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [fetchError, setFetchError] = useState(null);
-  const [summary, setSummary] = useState({});
-  const abortControllerRef = useRef(null);
+    // ── Core state ──────────────────────────────────────────────────────────────
+    const [allStocks, setAllStocks] = useState([]); // Store all fetched stocks
+    const [filteredStocks, setFilteredStocks] = useState([]); // Store filtered stocks for display
+    const [loading, setLoading] = useState(true);
+    const [fetchError, setFetchError] = useState(null);
+    const [summary, setSummary] = useState({});
+    const abortControllerRef = useRef(null);
+    const openedFromDetailRef = useRef(false);
 
-  // ── Modal state ─────────────────────────────────────────────────────────────
-  const [stockModalOpen, setStockModalOpen] = useState(false);
-  const [movementModalOpen, setMovementModalOpen] = useState(false);
-  const [detailModalOpen, setDetailModalOpen] = useState(false);
-  const [editingStock, setEditingStock] = useState(null);
-  const [editingMovement, setEditingMovement] = useState(null);
-  const [selectedStock, setSelectedStock] = useState(null);
+    // ── Modal state ─────────────────────────────────────────────────────────────
+    const [stockModalOpen, setStockModalOpen] = useState(false);
+    const [movementModalOpen, setMovementModalOpen] = useState(false);
+    const [detailModalOpen, setDetailModalOpen] = useState(false);
+    const [editingStock, setEditingStock] = useState(null);
+    const [editingMovement, setEditingMovement] = useState(null);
+    const [selectedStock, setSelectedStock] = useState(null);
+    const selectedStockRef = useRef(null);
+    const [movementSubmitting, setMovementSubmitting] = useState(false);
 
-  // ── Pagination state ─────────────────────────────────────────────────────────
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(12);
-  const [totalItems, setTotalItems] = useState(0);
-  const [totalPages, setTotalPages] = useState(1);
+    // ── Pagination state ─────────────────────────────────────────────────────────
+    const [currentPage, setCurrentPage] = useState(1);
+    const [pageSize, setPageSize] = useState(12);
+    const [totalItems, setTotalItems] = useState(0);
+    const [totalPages, setTotalPages] = useState(1);
 
-  // ── Filter / sort state ──────────────────────────────────────────────────────
-  const [filters, setFilters] = useState({ 
-    quality: '', 
-    status: '', 
-    low_stock: '',
-    search: '' 
-  });
-  const [sortField, setSortField] = useState('created_at');
-  const [sortDirection, setSortDirection] = useState('desc');
-  const [viewMode, setViewMode] = useState('grid');
+    // ── Filter / sort state ──────────────────────────────────────────────────────
+    const [filters, setFilters] = useState({
+        quality: '',
+        status: '',
+        low_stock: '',
+        search: ''
+    });
+    const [sortField, setSortField] = useState('created_at');
+    const [sortDirection, setSortDirection] = useState('desc');
+    const [viewMode, setViewMode] = useState('grid');
 
-  // ── Stats ────────────────────────────────────────────────────────────────────
-  const [stats, setStats] = useState({
-    total_stocks: 0,
-    total_quantity: 0,
-    active_stocks: 0,
-    low_stock_alerts: 0,
-    total_movements: 0
-  });
-
-  // ── Alerts ────────────────────────────────────────────────────────────────────
-  const [alerts, setAlerts] = useState([]);
-  const [alertsLoading, setAlertsLoading] = useState(false);
-
-  // ── Helpers ──────────────────────────────────────────────────────────────────
-  const getAuthToken = () =>
-    localStorage.getItem('access_token') ||
-    localStorage.getItem('accessToken') ||
-    sessionStorage.getItem('access_token') ||
-    sessionStorage.getItem('accessToken') ||
-    '';
-
-  const getUserLanguage = () =>
-    localStorage.getItem("language") || i18n.language || "en";
-
-  // ── API client ───────────────────────────────────────────────────────────────
-  const apiClient = useMemo(() => {
-    const client = axios.create({ baseURL: API_BASE_URL, timeout: 30000 });
-
-    client.interceptors.request.use((config) => {
-      const token = getAuthToken();
-      if (token) config.headers.Authorization = `Bearer ${token}`;
-      config.headers['Accept-Language'] = getUserLanguage();
-      config.headers['Content-Type'] = 'application/json';
-      return config;
+    // ── Stats ────────────────────────────────────────────────────────────────────
+    const [stats, setStats] = useState({
+        total_stocks: 0,
+        total_quantity: 0,
+        active_stocks: 0,
+        low_stock_alerts: 0,
+        total_movements: 0
     });
 
-    client.interceptors.response.use(
-      (response) => response,
-      (error) => {
-        if (error.response?.status === 401) {
-          toast.error(t('session_expired'));
-          ['access_token', 'accessToken', 'refresh_token', 'refreshToken', 'user']
-            .forEach(k => localStorage.removeItem(k));
-          setTimeout(() => { window.location.href = '/'; }, 2000);
-        }
-        return Promise.reject(error);
-      }
-    );
+    // ── Alerts ────────────────────────────────────────────────────────────────────
+    const [alerts, setAlerts] = useState([]);
+    const [alertsLoading, setAlertsLoading] = useState(false);
 
-    return client;
-  }, [t]);
+    // ── Helpers ──────────────────────────────────────────────────────────────────
+    const getAuthToken = () =>
+        localStorage.getItem('access_token') ||
+        localStorage.getItem('accessToken') ||
+        sessionStorage.getItem('access_token') ||
+        sessionStorage.getItem('accessToken') ||
+        '';
 
-  // ── Fetch stocks ─────────────────────────────────────────────────────────────
-  const fetchStocks = useCallback(async (params) => {
-    if (abortControllerRef.current) abortControllerRef.current.abort();
-    abortControllerRef.current = new AbortController();
+    const getUserLanguage = () =>
+        localStorage.getItem("language") || i18n.language || "en";
 
-    try {
-      setLoading(true);
-      setFetchError(null);
-
-      const queryParams = new URLSearchParams({
-        page: params.pageArg,
-        page_size: params.pageSizeArg,
-        ...(params.sortFieldArg && { sort_by: params.sortFieldArg }),
-        ...(params.sortDirectionArg && { sort_dir: params.sortDirectionArg }),
-        ...(params.filtersArg.quality && { quality: params.filtersArg.quality }),
-        ...(params.filtersArg.status && { is_active: params.filtersArg.status }),
-        ...(params.filtersArg.low_stock && { low_stock: params.filtersArg.low_stock }),
-        ...(params.filtersArg.search && { product: params.filtersArg.search })
-      });
-
-      const response = await apiClient.get(`/farmer/stocks/?${queryParams}`, {
-        signal: abortControllerRef.current.signal
-      });
-
-      if (response.data) {
-        setStocks(response.data.stocks || []);
-        setTotalItems(response.data.total || 0);
-        setTotalPages(response.data.total_pages || 1);
-        setSummary(response.data.summary || {});
-        
-        // Update stats
-        setStats({
-          total_stocks: response.data.total || 0,
-          total_quantity: response.data.summary?.total_quantity || 0,
-          active_stocks: response.data.summary?.active_stocks || 0,
-          low_stock_alerts: response.data.summary?.low_stock_alerts || 0,
-          total_movements: 0
+    // ── API client setup ─────────────────────────────────────────────────────────
+    useEffect(() => {
+        apiClient.interceptors.request.use((config) => {
+            const token = getAuthToken();
+            if (token) config.headers.Authorization = `Bearer ${token}`;
+            config.headers['Accept-Language'] = getUserLanguage();
+            config.headers['Content-Type'] = 'application/json';
+            return config;
         });
-      }
-    } catch (error) {
-      if (error.name === 'AbortError' || error.code === 'ERR_CANCELED') return;
-      console.error('Error fetching stocks:', error);
-      setFetchError(error.message);
-      toast.error(t('failed_to_fetch_stocks'));
-    } finally {
-      setLoading(false);
-    }
-  }, [apiClient, t]);
 
-  // ── Fetch alerts ─────────────────────────────────────────────────────────────
-  const fetchAlerts = useCallback(async () => {
-    try {
-      setAlertsLoading(true);
-      const response = await apiClient.get('/farmer/alerts/unresolved/');
-      if (response.data) {
-        setAlerts(response.data.alerts || []);
-      }
-    } catch (error) {
-      console.error('Error fetching alerts:', error);
-    } finally {
-      setAlertsLoading(false);
-    }
-  }, [apiClient]);
+        apiClient.interceptors.response.use(
+            (response) => response,
+            (error) => {
+                if (error.response?.status === 401) {
+                    toast.error(t('session_expired'));
+                    ['access_token', 'accessToken', 'refresh_token', 'refreshToken', 'user']
+                        .forEach(k => localStorage.removeItem(k));
+                    setTimeout(() => { window.location.href = '/'; }, 2000);
+                }
+                return Promise.reject(error);
+            }
+        );
+    }, [t]);
 
-  // ── Initial load ─────────────────────────────────────────────────────────────
-  useEffect(() => {
-    const token = getAuthToken();
-    if (!token) {
-      toast.error(t('authentication_required'));
-      setTimeout(() => { window.location.href = '/'; }, 2000);
-      return;
-    }
+    // ── Filtering function ───────────────────────────────────────────────────────
+    const applyFilters = useCallback((stocksToFilter, currentFilters) => {
+        return stocksToFilter.filter(stock => {
+            // Filter by quality
+            if (currentFilters.quality && stock.quality_grade !== currentFilters.quality) {
+                return false;
+            }
 
-    fetchStocks({
-      filtersArg: filters,
-      pageArg: currentPage,
-      pageSizeArg: pageSize,
-      sortFieldArg: sortField,
-      sortDirectionArg: sortDirection
-    });
+            // Filter by status (active/inactive)
+            if (currentFilters.status) {
+                const isActive = currentFilters.status === 'true';
+                if (stock.is_active !== isActive) {
+                    return false;
+                }
+            }
 
-    fetchAlerts();
+            // Filter by low stock (quantity < 100)
+            if (currentFilters.low_stock === 'true' && stock.quantity >= 100) {
+                return false;
+            }
 
-    return () => {
-      if (abortControllerRef.current) abortControllerRef.current.abort();
+            // Filter by search term
+            if (currentFilters.search) {
+                const searchTerm = currentFilters.search.toLowerCase().trim();
+                const location = (stock.location?.location || stock.location || '').toLowerCase();
+                const productName = (stock.product_name || '').toLowerCase();
+                
+                return productName.includes(searchTerm) || 
+                       location.includes(searchTerm) ||
+                       stock.id.toString().includes(searchTerm);
+            }
+
+            return true;
+        });
+    }, []);
+
+    // ── Sorting function ─────────────────────────────────────────────────────────
+    const applySorting = useCallback((stocksToSort, field, direction) => {
+        return [...stocksToSort].sort((a, b) => {
+            let aValue = a[field];
+            let bValue = b[field];
+
+            // Handle special cases
+            if (field === 'location') {
+                aValue = a.location?.location || a.location || '';
+                bValue = b.location?.location || b.location || '';
+            }
+
+            // Handle numeric values
+            if (field === 'quantity' || field === 'price_per_kg') {
+                aValue = parseFloat(aValue) || 0;
+                bValue = parseFloat(bValue) || 0;
+            }
+
+            // Handle dates
+            if (field === 'created_at') {
+                aValue = new Date(aValue).getTime();
+                bValue = new Date(bValue).getTime();
+            }
+
+            // Compare
+            if (aValue < bValue) return direction === 'asc' ? -1 : 1;
+            if (aValue > bValue) return direction === 'asc' ? 1 : -1;
+            return 0;
+        });
+    }, []);
+
+    // ── Pagination function ──────────────────────────────────────────────────────
+    const paginateStocks = useCallback((stocksToPaginate, page, size) => {
+        const start = (page - 1) * size;
+        const end = start + size;
+        return stocksToPaginate.slice(start, end);
+    }, []);
+
+    // ── Apply filters and sorting whenever dependencies change ───────────────────
+    useEffect(() => {
+        if (allStocks.length > 0) {
+            // Apply filters
+            const filtered = applyFilters(allStocks, filters);
+            
+            // Apply sorting
+            const sorted = applySorting(filtered, sortField, sortDirection);
+            
+            // Update filtered stocks
+            setFilteredStocks(sorted);
+            setTotalItems(sorted.length);
+            setTotalPages(Math.ceil(sorted.length / pageSize));
+            
+            // Reset to first page when filters change
+            setCurrentPage(1);
+        }
+    }, [allStocks, filters, sortField, sortDirection, applyFilters, applySorting, pageSize]);
+
+    // ── Fetch stocks ─────────────────────────────────────────────────────────────
+    const fetchStocks = useCallback(async (params) => {
+        if (abortControllerRef.current) abortControllerRef.current.abort();
+        abortControllerRef.current = new AbortController();
+
+        try {
+            setLoading(true);
+            setFetchError(null);
+
+            // Build query params - only for initial fetch, not for filtering
+            const queryParams = new URLSearchParams({
+                page: 1, // Always fetch first page for initial load
+                page_size: 100, // Fetch a larger batch for client-side filtering
+                ...(params.sortFieldArg && { sort_by: params.sortFieldArg }),
+                ...(params.sortDirectionArg && { sort_dir: params.sortDirectionArg })
+                // Remove filter params from API call since we'll filter client-side
+            });
+
+            const response = await apiClient.get(`/farmer/stocks/?${queryParams}`, {
+                signal: abortControllerRef.current.signal
+            });
+
+            console.log("Retrieved stock data: ", response.data);
+
+            if (response.data) {
+                const fetchedStocks = response.data.stocks || [];
+                setAllStocks(fetchedStocks);
+                
+                // Set stats based on all stocks
+                setStats({
+                    total_stocks: fetchedStocks.length,
+                    total_quantity: fetchedStocks.reduce((sum, stock) => sum + (parseFloat(stock.quantity) || 0), 0),
+                    active_stocks: fetchedStocks.filter(s => s.is_active).length,
+                    low_stock_alerts: fetchedStocks.filter(s => parseFloat(s.quantity) < 100).length,
+                    total_movements: fetchedStocks.reduce((sum, stock) => sum + (stock.movements_count || 0), 0)
+                });
+            }
+        } catch (error) {
+            if (error.name === 'AbortError' || error.code === 'ERR_CANCELED') return;
+            console.error('Error fetching stocks:', error);
+            setFetchError(error.message);
+            toast.error(t('failed_to_fetch_stocks'));
+        } finally {
+            setLoading(false);
+        }
+    }, [t]);
+
+    // ── Fetch alerts ─────────────────────────────────────────────────────────────
+    const fetchAlerts = useCallback(async () => {
+        try {
+            setAlertsLoading(true);
+            const response = await apiClient.get('/farmer/alerts/unresolved/');
+            if (response.data) {
+                setAlerts(response.data.alerts || []);
+            }
+        } catch (error) {
+            console.error('Error fetching alerts:', error);
+        } finally {
+            setAlertsLoading(false);
+        }
+    }, []);
+
+    // ── Initial load ─────────────────────────────────────────────────────────────
+    useEffect(() => {
+        const token = getAuthToken();
+        if (!token) {
+            toast.error(t('authentication_required'));
+            setTimeout(() => { window.location.href = '/'; }, 2000);
+            return;
+        }
+
+        fetchStocks({
+            filtersArg: filters,
+            pageArg: currentPage,
+            pageSizeArg: pageSize,
+            sortFieldArg: sortField,
+            sortDirectionArg: sortDirection
+        });
+
+        fetchAlerts();
+
+        return () => {
+            if (abortControllerRef.current) abortControllerRef.current.abort();
+        };
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // ── Filter handlers ──────────────────────────────────────────────────────────
+    const handleFilterChange = (key, value) => {
+        setFilters(prev => ({ ...prev, [key]: value }));
+        // No API call needed - filtering happens in useEffect
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Filter handlers ──────────────────────────────────────────────────────────
-  const handleFilterChange = (key, value) => {
-    const newFilters = { ...filters, [key]: value };
-    const newPage = 1;
-    setFilters(newFilters);
-    setCurrentPage(newPage);
-    fetchStocks({
-      filtersArg: newFilters,
-      pageArg: newPage,
-      pageSizeArg: pageSize,
-      sortFieldArg: sortField,
-      sortDirectionArg: sortDirection
-    });
-  };
+    const handleSearch = () => {
+        // Search is already applied in real-time via handleFilterChange
+        // This button just triggers a re-evaluation (already handled by useEffect)
+        console.log('Search triggered');
+    };
 
-  const handleSearch = () => {
-    const newPage = 1;
-    setCurrentPage(newPage);
-    fetchStocks({
-      filtersArg: filters,
-      pageArg: newPage,
-      pageSizeArg: pageSize,
-      sortFieldArg: sortField,
-      sortDirectionArg: sortDirection
-    });
-  };
+    const handleSort = (field, direction) => {
+        setSortField(field);
+        setSortDirection(direction);
+        // Sorting happens in useEffect
+    };
 
-  const handleSort = (field, direction) => {
-    const newPage = 1;
-    setSortField(field);
-    setSortDirection(direction);
-    setCurrentPage(newPage);
-    fetchStocks({
-      filtersArg: filters,
-      pageArg: newPage,
-      pageSizeArg: pageSize,
-      sortFieldArg: field,
-      sortDirectionArg: direction
-    });
-  };
+    const handlePageChange = (page) => {
+        setCurrentPage(page);
+    };
 
-  const handlePageChange = (page) => {
-    setCurrentPage(page);
-    fetchStocks({
-      filtersArg: filters,
-      pageArg: page,
-      pageSizeArg: pageSize,
-      sortFieldArg: sortField,
-      sortDirectionArg: sortDirection
-    });
-  };
+    const handlePageSizeChange = (newSize) => {
+        setPageSize(newSize);
+        setCurrentPage(1);
+    };
 
-  const handlePageSizeChange = (newSize) => {
-    const newPage = 1;
-    setPageSize(newSize);
-    setCurrentPage(newPage);
-    fetchStocks({
-      filtersArg: filters,
-      pageArg: newPage,
-      pageSizeArg: newSize,
-      sortFieldArg: sortField,
-      sortDirectionArg: sortDirection
-    });
-  };
+    // ── Stock CRUD handlers ──────────────────────────────────────────────────────
+    const handleAddStock = () => {
+        setEditingStock(null);
+        setStockModalOpen(true);
+    };
 
-  // ── Stock CRUD handlers ──────────────────────────────────────────────────────
-  const handleAddStock = () => {
-    setEditingStock(null);
-    setStockModalOpen(true);
-  };
+    const handleEditStock = (stock) => {
+        setEditingStock(stock);
+        setStockModalOpen(true);
+    };
 
-  const handleEditStock = (stock) => {
-    setEditingStock(stock);
-    setStockModalOpen(true);
-  };
+    const handleDeleteStock = async (stockId) => {
+        if (!window.confirm(t('confirm_delete_stock'))) return;
 
-  const handleDeleteStock = async (stockId) => {
-    if (!window.confirm(t('confirm_delete_stock'))) return;
-
-    try {
-      const response = await apiClient.delete(`/stocks/${stockId}/delete/`);
-      if (response.data) {
-        toast.success(response.data.message || t('stock_deleted'));
-        fetchStocks({
-          filtersArg: filters,
-          pageArg: currentPage,
-          pageSizeArg: pageSize,
-          sortFieldArg: sortField,
-          sortDirectionArg: sortDirection
-        });
-      }
-    } catch (error) {
-      console.error('Error deleting stock:', error);
-      toast.error(error.response?.data?.error || t('failed_to_delete_stock'));
-    }
-  };
-
-  const handleSubmitStock = async (formData) => {
-    try {
-      const url = editingStock ? `/stocks/${editingStock.id}/update/` : '/stocks/create/';
-      const method = editingStock ? 'PUT' : 'POST';
-
-      const response = await apiClient({
-        method,
-        url,
-        data: formData
-      });
-
-      if (response.data) {
-        toast.success(response.data.message || t('stock_saved'));
-        fetchStocks({
-          filtersArg: filters,
-          pageArg: currentPage,
-          pageSizeArg: pageSize,
-          sortFieldArg: sortField,
-          sortDirectionArg: sortDirection
-        });
-        fetchAlerts();
-      }
-    } catch (error) {
-      console.error('Error saving stock:', error);
-      toast.error(error.response?.data?.error || t('failed_to_save_stock'));
-      throw error;
-    }
-  };
-
-  // ── Movement CRUD handlers ───────────────────────────────────────────────────
-  const handleAddMovement = (stock) => {
-    setSelectedStock(stock);
-    setEditingMovement(null);
-    setMovementModalOpen(true);
-  };
-
-  const handleEditMovement = (movement) => {
-    setEditingMovement(movement);
-    setMovementModalOpen(true);
-  };
-
-  const handleDeleteMovement = async (movementId) => {
-    if (!window.confirm(t('confirm_delete_movement'))) return;
-
-    try {
-      const response = await apiClient.delete(`/movements/${movementId}/delete/`);
-      if (response.data) {
-        toast.success(response.data.message || t('movement_deleted'));
-        
-        // Refresh stock details if modal is open
-        if (selectedStock) {
-          const stockResponse = await apiClient.get(`/farmer/stocks/${selectedStock.id}/`);
-          if (stockResponse.data) {
-            setSelectedStock(stockResponse.data.stock);
-          }
+        try {
+            const response = await apiClient.delete(`/stocks/${stockId}/delete/`);
+            if (response.data) {
+                toast.success(response.data.message || t('stock_deleted'));
+                // Refresh the stocks list
+                fetchStocks({
+                    filtersArg: filters,
+                    pageArg: currentPage,
+                    pageSizeArg: pageSize,
+                    sortFieldArg: sortField,
+                    sortDirectionArg: sortDirection
+                });
+            }
+        } catch (error) {
+            console.error('Error deleting stock:', error);
+            toast.error(error.response?.data?.error || t('failed_to_delete_stock'));
         }
-        
-        fetchStocks({
-          filtersArg: filters,
-          pageArg: currentPage,
-          pageSizeArg: pageSize,
-          sortFieldArg: sortField,
-          sortDirectionArg: sortDirection
-        });
-      }
-    } catch (error) {
-      console.error('Error deleting movement:', error);
-      toast.error(error.response?.data?.error || t('failed_to_delete_movement'));
-    }
-  };
+    };
 
-  const handleSubmitMovement = async (formData) => {
-    try {
-      const url = editingMovement ? `/movements/${editingMovement.id}/update/` : '/movements/create/';
-      const method = editingMovement ? 'PUT' : 'POST';
+    const handleSubmitStock = async (formData) => {
+        try {
+            const url = editingStock ? `/stocks/${editingStock.id}/update/` : '/stocks/create/';
+            const method = editingStock ? 'PUT' : 'POST';
 
-      const response = await apiClient({
-        method,
-        url,
-        data: formData
-      });
+            const response = await apiClient({
+                method,
+                url,
+                data: formData
+            });
 
-      if (response.data) {
-        toast.success(response.data.message || t('movement_saved'));
-        
-        // Refresh stock details if modal is open
-        if (selectedStock) {
-          const stockResponse = await apiClient.get(`/farmer/stocks/${selectedStock.id}/`);
-          if (stockResponse.data) {
-            setSelectedStock(stockResponse.data.stock);
-          }
+            if (response.data) {
+                toast.success(response.data.message || t('stock_saved'));
+                // Refresh the stocks list
+                fetchStocks({
+                    filtersArg: filters,
+                    pageArg: currentPage,
+                    pageSizeArg: pageSize,
+                    sortFieldArg: sortField,
+                    sortDirectionArg: sortDirection
+                });
+                fetchAlerts();
+            }
+        } catch (error) {
+            console.error('Error saving stock:', error);
+            toast.error(error.response?.data?.error || t('failed_to_save_stock'));
+            throw error;
         }
-        
-        fetchStocks({
-          filtersArg: filters,
-          pageArg: currentPage,
-          pageSizeArg: pageSize,
-          sortFieldArg: sortField,
-          sortDirectionArg: sortDirection
-        });
-        fetchAlerts();
-      }
-    } catch (error) {
-      console.error('Error saving movement:', error);
-      toast.error(error.response?.data?.error || t('failed_to_save_movement'));
-      throw error;
-    }
-  };
+    };
 
-  // ── Alert handlers ───────────────────────────────────────────────────────────
-  const handleResolveAlert = async (alertId) => {
-    try {
-      const response = await apiClient.post(`/alerts/${alertId}/resolve/`);
-      if (response.data) {
-        toast.success(t('alert_resolved'));
-        fetchAlerts();
-      }
-    } catch (error) {
-      console.error('Error resolving alert:', error);
-      toast.error(t('failed_to_resolve_alert'));
-    }
-  };
+    // ── Movement CRUD handlers ───────────────────────────────────────────────────
+    const handleAddMovement = (stock) => {
+        openedFromDetailRef.current = detailModalOpen;
+        if (detailModalOpen) {
+            setDetailModalOpen(false);
+        }
+        selectedStockRef.current = stock;
+        setSelectedStock(stock);
+        setEditingMovement(null);
+        setMovementModalOpen(true);
+    };
 
-  // ── Stock detail handlers ────────────────────────────────────────────────────
-  const handleViewStock = async (stock) => {
-    try {
-      const response = await apiClient.get(`/farmer/stocks/${stock.id}/`);
-      if (response.data) {
-        setSelectedStock(response.data.stock);
-        setDetailModalOpen(true);
-      }
-    } catch (error) {
-      console.error('Error fetching stock details:', error);
-      toast.error(t('failed_to_fetch_stock_details'));
-    }
-  };
+    const handleEditMovement = (movement) => {
+        if (selectedStock) {
+            openedFromDetailRef.current = detailModalOpen;
+            selectedStockRef.current = selectedStock;
+            setEditingMovement(movement);
+            setDetailModalOpen(false);
+            setMovementModalOpen(true);
+        } else {
+            toast.error(t('select_stock_first'));
+        }
+    };
 
-  // ── Render ────────────────────────────────────────────────────────────────────
-  return (
-    <div className="stock-management-container">
-      <ToastContainer position="top-right" autoClose={5000} />
+    const handleDeleteMovement = async (movementId) => {
+        if (!window.confirm(t('confirm_delete_movement'))) return;
 
-      <style>{`
+        try {
+            const response = await apiClient.delete(`/movements/${movementId}/delete/`);
+            if (response.data) {
+                toast.success(response.data.message || t('movement_deleted'));
+
+                if (selectedStock) {
+                    const stockResponse = await apiClient.get(`/farmer/stocks/${selectedStock.id}/`);
+                    if (stockResponse.data) {
+                        setSelectedStock(stockResponse.data.stock);
+                        setDetailModalOpen(true);
+                    }
+                }
+
+                // Refresh the stocks list
+                fetchStocks({
+                    filtersArg: filters,
+                    pageArg: currentPage,
+                    pageSizeArg: pageSize,
+                    sortFieldArg: sortField,
+                    sortDirectionArg: sortDirection
+                });
+            }
+        } catch (error) {
+            console.error('Error deleting movement:', error);
+            toast.error(error.response?.data?.error || t('failed_to_delete_movement'));
+        }
+    };
+
+    const handleSubmitMovement = async (formData) => {
+        setMovementSubmitting(true);
+        try {
+            const url = editingMovement ? `/movements/${editingMovement.id}/update/` : '/movements/create/';
+            const method = editingMovement ? 'PUT' : 'POST';
+
+            const response = await apiClient({
+                method,
+                url,
+                data: formData
+            });
+
+            if (response.data) {
+                toast.success(response.data.message || t('movement_saved'));
+
+                setMovementModalOpen(false);
+                setEditingMovement(null);
+
+                if (openedFromDetailRef.current && selectedStock) {
+                    try {
+                        const stockResponse = await apiClient.get(`/farmer/stocks/${selectedStock.id}/`);
+                        if (stockResponse.data) {
+                            setSelectedStock(stockResponse.data.stock);
+                            setDetailModalOpen(true);
+                        }
+                    } catch (err) {
+                        console.error('Error refreshing stock details:', err);
+                    }
+                }
+
+                openedFromDetailRef.current = false;
+
+                // Refresh the stocks list
+                fetchStocks({
+                    filtersArg: filters,
+                    pageArg: currentPage,
+                    pageSizeArg: pageSize,
+                    sortFieldArg: sortField,
+                    sortDirectionArg: sortDirection
+                });
+
+                fetchAlerts();
+            }
+        } catch (error) {
+            console.error('Error saving movement:', error);
+            toast.error(error.response?.data?.error || t('failed_to_save_movement'));
+            throw error;
+        } finally {
+            setMovementSubmitting(false);
+        }
+    };
+
+    // ── Alert handlers ───────────────────────────────────────────────────────────
+    const handleResolveAlert = async (alertId) => {
+        try {
+            const response = await apiClient.post(`/alerts/${alertId}/resolve/`);
+            if (response.data) {
+                toast.success(t('alert_resolved'));
+                fetchAlerts();
+            }
+        } catch (error) {
+            console.error('Error resolving alert:', error);
+            toast.error(t('failed_to_resolve_alert'));
+        }
+    };
+
+    // ── Stock detail handlers ────────────────────────────────────────────────────
+    const handleViewStock = async (stock) => {
+        try {
+            const response = await apiClient.get(`/farmer/stocks/${stock.id}/`);
+            if (response.data) {
+                setSelectedStock(response.data.stock);
+                setDetailModalOpen(true);
+            }
+        } catch (error) {
+            console.error('Error fetching stock details:', error);
+            toast.error(t('failed_to_fetch_stock_details'));
+        }
+    };
+
+    // ── Handle movement modal close ──────────────────────────────────────────────
+    const handleMovementModalClose = () => {
+        setMovementModalOpen(false);
+        setEditingMovement(null);
+        if (openedFromDetailRef.current && selectedStock) {
+            setDetailModalOpen(true);
+        }
+        openedFromDetailRef.current = false;
+    };
+
+    // ── Handle detail modal close ────────────────────────────────────────────────
+    const handleDetailModalClose = () => {
+        setDetailModalOpen(false);
+        setSelectedStock(null);
+    };
+
+    // ── Get current page of filtered stocks ──────────────────────────────────────
+    const currentStocks = useMemo(() => {
+        return paginateStocks(filteredStocks, currentPage, pageSize);
+    }, [filteredStocks, currentPage, pageSize, paginateStocks]);
+
+    // ── Render ────────────────────────────────────────────────────────────────────
+    return (
+        <div className="stock-management-container">
+            <ToastContainer position="top-right" autoClose={5000} />
+
+            <style>{`
+        /* (Keep all the existing CSS styles) */
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
         .stock-management-container {
@@ -2014,7 +2132,11 @@ export default function MyStockManagement() {
         }
 
         .stock-quantity {
+          display: flex;
+          align-items: baseline;
+          gap: 8px;
           margin-bottom: 12px;
+          flex-wrap: wrap;
         }
 
         .quantity-value {
@@ -2026,7 +2148,17 @@ export default function MyStockManagement() {
         .quantity-unit {
           font-size: 14px;
           color: #64748b;
-          margin-left: 4px;
+        }
+
+        .price-tag {
+          margin-left: auto;
+          font-size: 12px;
+          font-weight: 600;
+          color: #1565c0;
+          background: #e3f2fd;
+          padding: 3px 8px;
+          border-radius: 6px;
+          white-space: nowrap;
         }
 
         .stock-badges {
@@ -2080,6 +2212,10 @@ export default function MyStockManagement() {
           font-weight: 500;
           cursor: pointer;
           transition: all 0.2s ease;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
         }
 
         .stock-footer-btn:hover {
@@ -2182,16 +2318,10 @@ export default function MyStockManagement() {
           font-weight: 600;
         }
 
-        .movement-location {
-          display: flex;
-          flex-direction: column;
-          gap: 2px;
-          font-size: 12px;
-        }
-
         .movement-notes {
-          max-width: 150px;
+          max-width: 200px;
           color: #64748b;
+          font-size: 12px;
         }
 
         .movement-actions {
@@ -2315,7 +2445,7 @@ export default function MyStockManagement() {
 
         .stock-detail-summary {
           display: grid;
-          grid-template-columns: repeat(4, 1fr);
+          grid-template-columns: repeat(5, 1fr);
           gap: 16px;
           padding: 20px;
           background: #f8fafc;
@@ -2334,7 +2464,7 @@ export default function MyStockManagement() {
         }
 
         .summary-value {
-          font-size: 18px;
+          font-size: 16px;
           font-weight: 600;
           color: #0f172a;
         }
@@ -2465,7 +2595,7 @@ export default function MyStockManagement() {
         /* Movement Type Selector */
         .movement-type-selector {
           display: grid;
-          grid-template-columns: repeat(2, 1fr);
+          grid-template-columns: repeat(3, 1fr);
           gap: 8px;
         }
 
@@ -2599,6 +2729,13 @@ export default function MyStockManagement() {
           margin-bottom: 8px;
         }
 
+        .field-hint {
+          font-weight: 400;
+          color: #94a3b8;
+          font-size: 12px;
+          margin-top: 4px;
+        }
+
         .form-control {
           width: 100%;
           padding: 12px 16px;
@@ -2606,6 +2743,7 @@ export default function MyStockManagement() {
           border-radius: 12px;
           font-size: 14px;
           transition: all 0.2s ease;
+          box-sizing: border-box;
         }
 
         .form-control:focus {
@@ -2635,11 +2773,74 @@ export default function MyStockManagement() {
           margin-top: 4px;
         }
 
+        /* Price input with currency prefix/suffix */
+        .price-input-wrapper {
+          display: flex;
+          align-items: center;
+          border: 1px solid #e2e8f0;
+          border-radius: 12px;
+          overflow: hidden;
+          transition: all 0.2s ease;
+        }
+
+        .price-input-wrapper:focus-within {
+          border-color: #2d5a2d;
+          box-shadow: 0 0 0 3px rgba(45,90,45,0.1);
+        }
+
+        .price-currency {
+          padding: 12px 12px 12px 16px;
+          background: #f8fafc;
+          color: #64748b;
+          font-size: 13px;
+          font-weight: 600;
+          border-right: 1px solid #e2e8f0;
+          white-space: nowrap;
+        }
+
+        .price-input {
+          flex: 1;
+          border: none !important;
+          border-radius: 0 !important;
+          box-shadow: none !important;
+          padding: 12px;
+        }
+
+        .price-input:focus {
+          outline: none;
+          box-shadow: none !important;
+        }
+
+        .price-unit {
+          padding: 12px 16px 12px 8px;
+          background: #f8fafc;
+          color: #64748b;
+          font-size: 13px;
+          font-weight: 600;
+          border-left: 1px solid #e2e8f0;
+          white-space: nowrap;
+        }
+
+        /* Live price estimate */
+        .price-estimate {
+          margin-top: 8px;
+          font-size: 13px;
+          color: #475569;
+          background: #f0fdf4;
+          border: 1px solid #bbf7d0;
+          border-radius: 8px;
+          padding: 8px 12px;
+        }
+
+        .price-estimate strong {
+          color: #15803d;
+        }
+
         /* Location Selector */
         .location-selector {
           display: flex;
           flex-direction: column;
-          gap: 12px;
+          gap: 10px;
         }
 
         .location-row {
@@ -2656,6 +2857,7 @@ export default function MyStockManagement() {
           background: white;
           cursor: pointer;
           transition: all 0.2s ease;
+          box-sizing: border-box;
         }
 
         .location-select:focus {
@@ -2672,6 +2874,20 @@ export default function MyStockManagement() {
           background: #f1f5f9;
           cursor: not-allowed;
           opacity: 0.6;
+        }
+
+        /* Live preview of combined location */
+        .location-preview {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 8px 12px;
+          background: #f0fdf4;
+          border: 1px solid #bbf7d0;
+          border-radius: 8px;
+          font-size: 12px;
+          color: #15803d;
+          font-weight: 500;
         }
 
         /* Button Styles */
@@ -2904,238 +3120,246 @@ export default function MyStockManagement() {
         }
       `}</style>
 
-      {/* Page Header */}
-      <div className="page-header">
-        <div className="header-left">
-          <h1>{t('stock_management')}</h1>
-          <p>{t('manage_your_stocks_and_movements')}</p>
-        </div>
-        <div className="header-right">
-          <button className="export-btn">
-            <Download size={16} />
-            {t('export')}
-          </button>
-          <button className="add-stock-btn" onClick={handleAddStock}>
-            <Plus size={18} />
-            {t('add_stock')}
-          </button>
-        </div>
-      </div>
-
-      {/* Alerts Bar */}
-      {alerts.length > 0 && (
-        <div className="alerts-bar">
-          <div className="alerts-icon">
-            <AlertTriangle size={20} />
-          </div>
-          <div className="alerts-content">
-            <div className="alerts-title">
-              {t('you_have_alerts', { count: alerts.length })}
-            </div>
-            <div className="alerts-list-compact">
-              {alerts.slice(0, 3).map(alert => (
-                <div key={alert.id} className="alert-tag" onClick={() => handleResolveAlert(alert.id)}>
-                  <span className="alert-severity-dot" style={{ backgroundColor: alertSeverities.find(s => s.value === alert.severity)?.color }} />
-                  {alert.stock_details?.product_name}: {alert.message}
+            {/* Page Header */}
+            <div className="page-header">
+                <div className="header-left">
+                    <h1>{t('stock_management')}</h1>
+                    <p>{t('manage_your_stocks_and_movements')}</p>
                 </div>
-              ))}
-              {alerts.length > 3 && (
-                <div className="alert-tag">
-                  +{alerts.length - 3} {t('more')}
+                <div className="header-right">
+                    <button className="add-stock-btn" onClick={handleAddStock}>
+                        <Plus size={18} />
+                        {t('add_stock')}
+                    </button>
                 </div>
-              )}
             </div>
-          </div>
-        </div>
-      )}
 
-      {/* Summary Cards */}
-      <div className="summary-cards">
-        <SummaryCard
-          title={t('total_stocks')}
-          value={stats.total_stocks}
-          icon={<Package size={24} />}
-          color="#2d5a2d"
-          bgColor="#e8f5e9"
-        />
-        <SummaryCard
-          title={t('total_quantity')}
-          value={`${stats.total_quantity.toLocaleString()} kg`}
-          icon={<Layers size={24} />}
-          color="#1565c0"
-          bgColor="#e3f2fd"
-        />
-        <SummaryCard
-          title={t('active_stocks')}
-          value={stats.active_stocks}
-          icon={<CheckCircle size={24} />}
-          color="#0284c7"
-          bgColor="#e0f2fe"
-        />
-        <SummaryCard
-          title={t('low_stock_alerts')}
-          value={stats.low_stock_alerts}
-          icon={<AlertTriangle size={24} />}
-          color="#b45309"
-          bgColor="#fff7ed"
-        />
-        <SummaryCard
-          title={t('total_movements')}
-          value={stats.total_movements}
-          icon={<Activity size={24} />}
-          color="#7e22ce"
-          bgColor="#f3e8ff"
-        />
-      </div>
+            {/* Alerts Bar */}
+            {alerts.length > 0 && (
+                <div className="alerts-bar">
+                    <div className="alerts-icon">
+                        <AlertTriangle size={20} />
+                    </div>
+                    <div className="alerts-content">
+                        <div className="alerts-title">
+                            {t('you_have_alerts', { count: alerts.length })}
+                        </div>
+                        <div className="alerts-list-compact">
+                            {alerts.slice(0, 3).map(alert => (
+                                <div key={alert.id} className="alert-tag" onClick={() => handleResolveAlert(alert.id)}>
+                                    <span className="alert-severity-dot" style={{ backgroundColor: alertSeverities.find(s => s.value === alert.severity)?.color }} />
+                                    {alert.stock_details?.product_name}: {alert.message}
+                                </div>
+                            ))}
+                            {alerts.length > 3 && (
+                                <div className="alert-tag">
+                                    +{alerts.length - 3} {t('more')}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
 
-      {/* Filter Bar */}
-      <FilterBar
-        filters={filters}
-        onFilterChange={handleFilterChange}
-        onSearch={handleSearch}
-        onSort={handleSort}
-        sortField={sortField}
-        sortDirection={sortDirection}
-        viewMode={viewMode}
-        onViewModeChange={setViewMode}
-      />
-
-      {/* Stocks Display */}
-      {loading ? (
-        <LoadingSpinner />
-      ) : stocks.length === 0 ? (
-        <div className="empty-state">
-          <Package size={64} />
-          <p>{t('no_stocks_found')}</p>
-          <button className="add-stock-btn" onClick={handleAddStock} style={{ marginTop: '16px' }}>
-            <Plus size={18} />
-            {t('add_your_first_stock')}
-          </button>
-        </div>
-      ) : (
-        <>
-          {viewMode === 'grid' ? (
-            <div className="stock-grid">
-              {stocks.map(stock => (
-                <StockCard
-                  key={stock.id}
-                  stock={stock}
-                  onView={handleViewStock}
-                  onEdit={handleEditStock}
-                  onDelete={handleDeleteStock}
-                  t={t}
+            {/* Summary Cards */}
+            <div className="summary-cards">
+                <SummaryCard
+                    title={t('total_stocks')}
+                    value={stats.total_stocks}
+                    icon={<Package size={24} />}
+                    color="#2d5a2d"
+                    bgColor="#e8f5e9"
                 />
-              ))}
+                <SummaryCard
+                    title={t('total_quantity')}
+                    value={`${stats.total_quantity.toLocaleString()} kg`}
+                    icon={<Layers size={24} />}
+                    color="#1565c0"
+                    bgColor="#e3f2fd"
+                />
+                <SummaryCard
+                    title={t('active_stocks')}
+                    value={stats.active_stocks}
+                    icon={<CheckCircle size={24} />}
+                    color="#0284c7"
+                    bgColor="#e0f2fe"
+                />
+                <SummaryCard
+                    title={t('low_stock_alerts')}
+                    value={stats.low_stock_alerts}
+                    icon={<AlertTriangle size={24} />}
+                    color="#b45309"
+                    bgColor="#fff7ed"
+                />
+                <SummaryCard
+                    title={t('total_movements')}
+                    value={stats.total_movements}
+                    icon={<Activity size={24} />}
+                    color="#7e22ce"
+                    bgColor="#f3e8ff"
+                />
             </div>
-          ) : (
-            <div className="stock-list">
-              <table>
-                <thead>
-                  <tr>
-                    <th>{t('product')}</th>
-                    <th>{t('quantity')}</th>
-                    <th>{t('quality')}</th>
-                    <th>{t('location')}</th>
-                    <th>{t('status')}</th>
-                    <th>{t('movements')}</th>
-                    <th>{t('created')}</th>
-                    <th>{t('actions')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {stocks.map(stock => {
-                    const qualityGrade = qualityGrades.find(g => g.value === stock.quality_grade) || qualityGrades[1];
-                    return (
-                      <tr key={stock.id} onClick={() => handleViewStock(stock)}>
-                        <td>
-                          <strong>{stock.product_name}</strong>
-                          <div><small>#{stock.id}</small></div>
-                        </td>
-                        <td><strong>{stock.quantity} kg</strong></td>
-                        <td>
-                          <span style={{ color: qualityGrade.color }}>
-                            {qualityGrade.label}
-                          </span>
-                        </td>
-                        <td>{stock.location?.village}, {stock.location?.sector}</td>
-                        <td>
-                          <span style={{
-                            color: stock.is_active ? '#2e7d32' : '#c62828',
-                            background: stock.is_active ? '#e8f5e9' : '#ffebee',
-                            padding: '4px 8px',
-                            borderRadius: '4px',
-                            fontSize: '12px'
-                          }}>
-                            {stock.is_active ? t('active') : t('inactive')}
-                          </span>
-                        </td>
-                        <td>{stock.movements_count || 0}</td>
-                        <td>{new Date(stock.created_at).toLocaleDateString()}</td>
-                        <td onClick={(e) => e.stopPropagation()}>
-                          <div className="movement-actions">
-                            <button className="movement-action-btn" onClick={() => handleEditStock(stock)}>
-                              <Edit2 size={14} />
-                            </button>
-                            <button className="movement-action-btn delete" onClick={() => handleDeleteStock(stock.id)}>
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
 
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={handlePageChange}
-            pageSize={pageSize}
-            onPageSizeChange={handlePageSizeChange}
-            totalItems={totalItems}
-          />
-        </>
-      )}
+            {/* Filter Bar */}
+            <FilterBar
+                filters={filters}
+                onFilterChange={handleFilterChange}
+                onSearch={handleSearch}
+                onSort={handleSort}
+                sortField={sortField}
+                sortDirection={sortDirection}
+                viewMode={viewMode}
+                onViewModeChange={setViewMode}
+            />
 
-      {/* Stock Form Modal */}
-      <StockFormModal
-        isOpen={stockModalOpen}
-        onClose={() => setStockModalOpen(false)}
-        onSubmit={handleSubmitStock}
-        editingStock={editingStock}
-        t={t}
-      />
+            {/* Stocks Display */}
+            {loading ? (
+                <LoadingSpinner />
+            ) : filteredStocks.length === 0 ? (
+                <div className="empty-state">
+                    <Package size={64} />
+                    <p>{allStocks.length === 0 ? t('no_stocks_found') : t('no_matching_stocks')}</p>
+                    {allStocks.length === 0 ? (
+                        <button className="add-stock-btn" onClick={handleAddStock} style={{ marginTop: '16px' }}>
+                            <Plus size={18} />
+                            {t('add_your_first_stock')}
+                        </button>
+                    ) : (
+                        <button className="add-stock-btn" onClick={() => setFilters({ quality: '', status: '', low_stock: '', search: '' })} style={{ marginTop: '16px' }}>
+                            <Filter size={18} />
+                            {t('clear_filters')}
+                        </button>
+                    )}
+                </div>
+            ) : (
+                <>
+                    {viewMode === 'grid' ? (
+                        <div className="stock-grid">
+                            {currentStocks.map(stock => (
+                                <StockCard
+                                    key={stock.id}
+                                    stock={stock}
+                                    onView={handleViewStock}
+                                    onEdit={handleEditStock}
+                                    onDelete={handleDeleteStock}
+                                    onAddMovement={handleAddMovement}
+                                    t={t}
+                                />
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="stock-list">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>{t('product')}</th>
+                                        <th>{t('quantity')}</th>
+                                        <th>{t('price_per_kg') || 'Price/kg'}</th>
+                                        <th>{t('quality')}</th>
+                                        <th>{t('location')}</th>
+                                        <th>{t('status')}</th>
+                                        <th>{t('movements')}</th>
+                                        <th>{t('created')}</th>
+                                        <th>{t('actions')}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {currentStocks.map(stock => {
+                                        const qualityGrade = qualityGrades.find(g => g.value === stock.quality_grade) || qualityGrades[1];
+                                        return (
+                                            <tr key={stock.id} onClick={() => handleViewStock(stock)}>
+                                                <td>
+                                                    <strong>{stock.product_name}</strong>
+                                                    <div><small>#{stock.id}</small></div>
+                                                </td>
+                                                <td><strong>{stock.quantity} kg</strong></td>
+                                                <td>
+                                                    {stock.price_per_kg
+                                                        ? <span style={{ color: '#1565c0', fontWeight: 600 }}>{Number(stock.price_per_kg).toLocaleString()} RWF</span>
+                                                        : <span style={{ color: '#94a3b8' }}>—</span>}
+                                                </td>
+                                                <td>
+                                                    <span style={{ color: qualityGrade.color }}>
+                                                        {qualityGrade.label}
+                                                    </span>
+                                                </td>
+                                                <td>{stock.location?.location || stock.location}</td>
+                                                <td>
+                                                    <span style={{
+                                                        color: stock.is_active ? '#2e7d32' : '#c62828',
+                                                        background: stock.is_active ? '#e8f5e9' : '#ffebee',
+                                                        padding: '4px 8px',
+                                                        borderRadius: '4px',
+                                                        fontSize: '12px'
+                                                    }}>
+                                                        {stock.is_active ? t('active') : t('inactive')}
+                                                    </span>
+                                                </td>
+                                                <td>{stock.movements_count || 0}</td>
+                                                <td>{new Date(stock.created_at).toLocaleDateString()}</td>
+                                                <td onClick={(e) => e.stopPropagation()}>
+                                                    <div className="movement-actions">
+                                                        <button className="movement-action-btn" onClick={() => handleAddMovement(stock)} title={t('add_movement')}>
+                                                            <Plus size={14} />
+                                                        </button>
+                                                        <button className="movement-action-btn" onClick={() => handleEditStock(stock)}>
+                                                            <Edit2 size={14} />
+                                                        </button>
+                                                        <button className="movement-action-btn delete" onClick={() => handleDeleteStock(stock.id)}>
+                                                            <Trash2 size={14} />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
 
-      {/* Movement Form Modal */}
-      <MovementFormModal
-        isOpen={movementModalOpen}
-        onClose={() => {
-          setMovementModalOpen(false);
-          setEditingMovement(null);
-        }}
-        onSubmit={handleSubmitMovement}
-        stock={selectedStock}
-        editingMovement={editingMovement}
-        t={t}
-      />
+                    <Pagination
+                        currentPage={currentPage}
+                        totalPages={totalPages}
+                        onPageChange={handlePageChange}
+                        pageSize={pageSize}
+                        onPageSizeChange={handlePageSizeChange}
+                        totalItems={totalItems}
+                    />
+                </>
+            )}
 
-      {/* Stock Detail Modal */}
-      {selectedStock && (
-        <StockDetailModal
-          stock={selectedStock}
-          onClose={() => {
-            setDetailModalOpen(false);
-            setSelectedStock(null);
-          }}
-          onAddMovement={handleAddMovement}
-          onEditMovement={handleEditMovement}
-          onDeleteMovement={handleDeleteMovement}
-          t={t}
-        />
-      )}
-    </div>
-  );
+            {/* Stock Form Modal */}
+            <StockFormModal
+                isOpen={stockModalOpen}
+                onClose={() => setStockModalOpen(false)}
+                onSubmit={handleSubmitStock}
+                editingStock={editingStock}
+                t={t}
+            />
+
+            {/* Movement Form Modal */}
+            <MovementFormModal
+                isOpen={movementModalOpen}
+                onClose={handleMovementModalClose}
+                onSubmit={handleSubmitMovement}
+                stock={selectedStockRef.current}
+                editingMovement={editingMovement}
+                t={t}
+                isSubmitting={movementSubmitting}
+            />
+
+            {/* Stock Detail Modal */}
+            {selectedStock && (
+                <StockDetailModal
+                    stock={selectedStock}
+                    onClose={handleDetailModalClose}
+                    onAddMovement={handleAddMovement}
+                    onEditMovement={handleEditMovement}
+                    onDeleteMovement={handleDeleteMovement}
+                    t={t}
+                />
+            )}
+        </div>
+    );
 }

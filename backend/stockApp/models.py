@@ -36,6 +36,13 @@ class Stock(models.Model):
     
     # Location information (Rwandan administrative divisions)
     location = models.CharField(max_length=100)
+    price_per_kg = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal('0.01'))],
+        help_text="Price per kilogram in Rwandan Francs",
+        default=Decimal('100.00')
+    )
     
     
     description = models.TextField(blank=True, help_text="Additional details about the stock")

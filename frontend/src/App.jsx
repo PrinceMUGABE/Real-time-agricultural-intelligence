@@ -11,6 +11,7 @@ import ManageCrops from './component/pages/admin/ManageCrops';
 import FarmersPage from './component/pages/admin/ManageFarmers';
 import UserManagement from './component/pages/admin/UserManagement';
 import ContractsManagement from './component/pages/admin/ManageContracts';
+import AdminStandardsManagement from './component/pages/admin/ManageStandards';
 
 
 
@@ -49,6 +50,7 @@ function App() {
             <Route path="farmers" element={<FarmersPage />} />
             <Route path="users" element={<UserManagement />} />
             <Route path="contracts" element={<ContractsManagement />} />
+            <Route path="standards" element={<AdminStandardsManagement />} />
           </Route>
 
 
