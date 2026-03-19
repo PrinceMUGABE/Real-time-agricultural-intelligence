@@ -113,7 +113,7 @@ class CropStandardSerializer(serializers.ModelSerializer):
         # Validate buyer role on creation
         request = self.context.get('request')
         if request and request.method == 'POST':
-            if request.user.role != 'buyer':
+            if request.user.role != 'buyer' and request.user.role != 'admin':
                 raise serializers.ValidationError(
                     nt('buyer_only', self.context.get('lang', 'en'))
                 )

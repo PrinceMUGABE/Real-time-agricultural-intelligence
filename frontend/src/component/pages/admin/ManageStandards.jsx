@@ -18,8 +18,10 @@ import {
     Upload, PieChart, Activity, Zap, Award, Leaf, Sun,
     Cloud, Droplet, Wind, Thermometer, Calendar as CalendarIcon,
     Hash, Tag, Star, Percent, Weight, Scale, TrendingUp as TrendUp,
-    TrendingDown as TrendDown, Minus, Plus as PlusIcon
+    TrendingDown as TrendDown, Minus, Plus as PlusIcon, Globe,
+    ArrowRight, Star as StarIcon
 } from "lucide-react";
+import locationData from "../../common/locationData.json";
 
 // API Base URL
 const API_BASE_URL = "http://127.0.0.1:8000/standard";
@@ -27,9 +29,9 @@ const API_BASE_URL = "http://127.0.0.1:8000/standard";
 
 // Quality grade options (matching backend)
 const qualityGrades = [
-    { value: "A", label: "Grade A - Premium", color: "#2e7d32", bg: "#e8f5e9", icon: "⭐" },
-    { value: "B", label: "Grade B - Standard", color: "#1565c0", bg: "#e3f2fd", icon: "✅" },
-    { value: "C", label: "Grade C - Economy", color: "#b45309", bg: "#fff7ed", icon: "📦" }
+    { value: "A", label: "Grade A - Premium", color: "#2e7d32", bg: "#e8f5e9", icon: <StarIcon size={12} /> },
+    { value: "B", label: "Grade B - Standard", color: "#1565c0", bg: "#e3f2fd", icon: <Check size={12} /> },
+    { value: "C", label: "Grade C - Economy", color: "#b45309", bg: "#fff7ed", icon: <Package size={12} /> }
 ];
 
 // Crop type options
@@ -54,6 +56,7 @@ const statusOptions = [
     { value: "expired", label: "Expired", color: "#b91c1c", bg: "#fee2e2", icon: AlertCircle }
 ];
 
+
 // Initial empty form for standard creation/editing
 const emptyStandardForm = {
     crop_name: "",
@@ -67,8 +70,146 @@ const emptyStandardForm = {
     description: "",
     preferred_location: "",
     status: "active",
-    buyer_id: ""
+    buyer_id: "" // Empty means create for self (admin)
 };
+
+// Location selector component for preferred location field
+function LocationSelector({ value, onChange, error, t }) {
+    const ANYWHERE_VALUE = "anywhere";
+
+    // Parse location string into parts
+    const parseLocation = (locationStr) => {
+        if (!locationStr || locationStr === ANYWHERE_VALUE) {
+            return { province: ANYWHERE_VALUE, district: "", sector: "" };
+        }
+        const [province = "", district = "", sector = ""] = locationStr.split(',').map(p => p.trim());
+        return { province, district, sector };
+    };
+
+    // Format location parts into string
+    const formatLocation = (parts) => {
+        if (parts.province === ANYWHERE_VALUE) {
+            return ANYWHERE_VALUE;
+        }
+        return [parts.province, parts.district, parts.sector].filter(Boolean).join(', ');
+    };
+
+    const [locationParts, setLocationParts] = useState(parseLocation(value));
+
+    // Update parent when location parts change
+    const handleLocationChange = (newParts) => {
+        setLocationParts(newParts);
+        const locationString = formatLocation(newParts);
+        onChange(locationString);
+    };
+
+    const handleProvinceChange = (province) => {
+        const newParts = {
+            province,
+            district: "",
+            sector: ""
+        };
+        handleLocationChange(newParts);
+    };
+
+    const handleDistrictChange = (district) => {
+        const newParts = {
+            ...locationParts,
+            district,
+            sector: ""
+        };
+        handleLocationChange(newParts);
+    };
+
+    const handleSectorChange = (sector) => {
+        const newParts = {
+            ...locationParts,
+            sector
+        };
+        handleLocationChange(newParts);
+    };
+
+    // Get provinces list with "Anywhere" option
+    const provinces = [
+        { value: ANYWHERE_VALUE, label: t('anywhere_in_rwanda') },
+        ...locationData.provinces.map(p => ({
+            value: p.city || p.province,
+            label: p.city || p.province
+        }))
+    ];
+
+    // Get districts for selected province
+    const districts = locationParts.province && locationParts.province !== ANYWHERE_VALUE
+        ? (locationData.provinces.find(p => (p.city || p.province) === locationParts.province)?.coordinates?.districts || [])
+        : [];
+
+    // Get sectors for selected district
+    const sectors = locationParts.district
+        ? (districts.find(d => d.name === locationParts.district)?.sectors || [])
+        : [];
+
+    return (
+        <div className="location-selector">
+            <div className="location-row">
+                <select
+                    className={`location-select ${error && !locationParts.province ? 'error' : ''}`}
+                    value={locationParts.province}
+                    onChange={(e) => handleProvinceChange(e.target.value)}
+                >
+                    <option value="">{t('select_province')}</option>
+                    {provinces.map(province => (
+                        <option key={province.value} value={province.value}>
+                            {province.label}
+                        </option>
+                    ))}
+                </select>
+            </div>
+
+            {locationParts.province && locationParts.province !== ANYWHERE_VALUE && (
+                <>
+                    <div className="location-row">
+                        <select
+                            className={`location-select ${error && !locationParts.district ? 'error' : ''}`}
+                            value={locationParts.district}
+                            onChange={(e) => handleDistrictChange(e.target.value)}
+                        >
+                            <option value="">{t('select_district')}</option>
+                            {districts.map(district => (
+                                <option key={district.name} value={district.name}>
+                                    {district.name}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {locationParts.district && (
+                        <div className="location-row">
+                            <select
+                                className={`location-select ${error && !locationParts.sector ? 'error' : ''}`}
+                                value={locationParts.sector}
+                                onChange={(e) => handleSectorChange(e.target.value)}
+                            >
+                                <option value="">{t('select_sector')}</option>
+                                {sectors.map(sector => (
+                                    <option key={sector.name} value={sector.name}>
+                                        {sector.name}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
+                </>
+            )}
+
+            {locationParts.province === ANYWHERE_VALUE && (
+                <div className="location-hint">
+                    <Globe size={14} />
+                    <span>{t('anywhere_location_hint')}</span>
+                </div>
+            )}
+        </div>
+    );
+}
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -164,87 +305,188 @@ function Pagination({ currentPage, totalPages, onPageChange, pageSize, onPageSiz
     );
 }
 
-function FilterBar({ filters, onFilterChange, onSearch, onSort, sortField, sortDirection, viewMode, onViewModeChange }) {
+function FilterBar({ filters, onFilterChange, onSearch, onSort, sortField, sortDirection, viewMode, onViewModeChange, standards = [] }) {
     const { t } = useTranslation();
+
+    // Extract unique values from standards data
+    const getUniqueValues = (field) => {
+        if (!standards || standards.length === 0) return [];
+
+        const values = standards
+            .map(s => s[field])
+            .filter((value, index, self) =>
+                value && self.indexOf(value) === index
+            )
+            .sort();
+
+        return values;
+    };
+
+    // Get unique crop names
+    const cropOptions = getUniqueValues('crop_name').map(crop => ({
+        value: crop,
+        label: crop
+    }));
+
+    // Get unique seasons with their display names
+    const seasonOptions = standards
+        .filter(s => s.season && s.season_display)
+        .map(s => ({
+            value: s.season,
+            label: s.season_display
+        }))
+        .filter((season, index, self) =>
+            index === self.findIndex(s => s.value === season.value)
+        )
+        .sort((a, b) => a.value.localeCompare(b.value));
+
+    // Get unique harvest years
+    const yearOptions = getUniqueValues('harvest_year')
+        .map(year => ({
+            value: year,
+            label: year.toString()
+        }))
+        .sort((a, b) => b.value - a.value); // Sort descending (newest first)
+
+    // Get unique quality grades with their display names
+    const qualityOptions = standards
+        .filter(s => s.quality_grade && s.quality_display)
+        .map(s => ({
+            value: s.quality_grade,
+            label: s.quality_display,
+            color: s.quality_grade === 'A' ? '#2e7d32' :
+                s.quality_grade === 'B' ? '#1565c0' : '#b45309'
+        }))
+        .filter((quality, index, self) =>
+            index === self.findIndex(q => q.value === quality.value)
+        )
+        .sort((a, b) => a.value.localeCompare(b.value));
+
+    // Get unique statuses with their display names
+    const statusOptions = standards
+        .filter(s => s.status && s.status_display)
+        .map(s => ({
+            value: s.status,
+            label: s.status_display,
+            color: s.status === 'active' ? '#2e7d32' :
+                s.status === 'inactive' ? '#64748b' : '#b91c1c'
+        }))
+        .filter((status, index, self) =>
+            index === self.findIndex(s => s.value === status.value)
+        )
+        .sort((a, b) => a.value.localeCompare(b.value));
+
+    // Get unique buyers
+    const buyerOptions = standards
+        .filter(s => s.created_by_details)
+        .map(s => ({
+            value: s.created_by,
+            label: s.created_by_details.full_name,
+            phone: s.created_by_details.phone_number
+        }))
+        .filter((buyer, index, self) =>
+            index === self.findIndex(b => b.value === buyer.value)
+        )
+        .sort((a, b) => a.label.localeCompare(b.label));
 
     const sortOptions = [
         { value: 'crop_name', label: t('crop_name') },
         { value: 'price_per_kg', label: t('price_per_kg') },
         { value: 'harvest_year', label: t('harvest_year') },
         { value: 'status', label: t('status') },
-        { value: 'created_at', label: t('created_date') }
+        { value: 'created_at', label: t('created_date') },
+        { value: 'min_quantity', label: t('min_quantity') },
+        { value: 'max_quantity', label: t('max_quantity') }
     ];
-
-    // Generate year options (last 5 years to next 2 years)
-    const currentYear = new Date().getFullYear();
-    const yearOptions = [];
-    for (let year = currentYear - 5; year <= currentYear + 2; year++) {
-        yearOptions.push(year);
-    }
 
     return (
         <div className="filter-bar">
             <div className="filter-group">
+                {/* Crop filter */}
                 <select
                     className="filter-select"
                     value={filters.crop || ''}
                     onChange={(e) => onFilterChange('crop', e.target.value)}
                 >
                     <option value="">{t('all_crops')}</option>
-                    <option value="maize">{t('maize')}</option>
-                    <option value="beans">{t('beans')}</option>
-                    <option value="rice">{t('rice')}</option>
-                    <option value="wheat">{t('wheat')}</option>
-                    <option value="potatoes">{t('potatoes')}</option>
-                    <option value="cassava">{t('cassava')}</option>
-                    <option value="bananas">{t('bananas')}</option>
-                    <option value="coffee">{t('coffee')}</option>
-                    <option value="tea">{t('tea')}</option>
+                    {cropOptions.map(option => (
+                        <option key={option.value} value={option.value}>
+                            {option.label}
+                        </option>
+                    ))}
                 </select>
 
+                {/* Season filter */}
                 <select
                     className="filter-select"
                     value={filters.season || ''}
                     onChange={(e) => onFilterChange('season', e.target.value)}
                 >
                     <option value="">{t('all_seasons')}</option>
-                    {seasons.map(season => (
-                        <option key={season.value} value={season.value}>{season.label}</option>
+                    {seasonOptions.map(option => (
+                        <option key={option.value} value={option.value}>
+                            {option.label}
+                        </option>
                     ))}
                 </select>
 
+                {/* Year filter */}
                 <select
                     className="filter-select"
                     value={filters.year || ''}
                     onChange={(e) => onFilterChange('year', e.target.value)}
                 >
                     <option value="">{t('all_years')}</option>
-                    {yearOptions.map(year => (
-                        <option key={year} value={year}>{year}</option>
+                    {yearOptions.map(option => (
+                        <option key={option.value} value={option.value}>
+                            {option.label}
+                        </option>
                     ))}
                 </select>
 
+                {/* Quality filter */}
                 <select
                     className="filter-select"
                     value={filters.quality || ''}
                     onChange={(e) => onFilterChange('quality', e.target.value)}
                 >
                     <option value="">{t('all_qualities')}</option>
-                    {qualityGrades.map(grade => (
-                        <option key={grade.value} value={grade.value}>{grade.label}</option>
+                    {qualityOptions.map(option => (
+                        <option key={option.value} value={option.value}>
+                            {option.label}
+                        </option>
                     ))}
                 </select>
 
+                {/* Status filter */}
                 <select
                     className="filter-select"
                     value={filters.status || ''}
                     onChange={(e) => onFilterChange('status', e.target.value)}
                 >
                     <option value="">{t('all_status')}</option>
-                    {statusOptions.map(status => (
-                        <option key={status.value} value={status.value}>{status.label}</option>
+                    {statusOptions.map(option => (
+                        <option key={option.value} value={option.value}>
+                            {option.label}
+                        </option>
                     ))}
                 </select>
+
+                {/* Buyer filter (for admin view) */}
+                {buyerOptions.length > 0 && (
+                    <select
+                        className="filter-select"
+                        value={filters.buyer || ''}
+                        onChange={(e) => onFilterChange('buyer', e.target.value)}
+                    >
+                        <option value="">{t('all_buyers')}</option>
+                        {buyerOptions.map(option => (
+                            <option key={option.value} value={option.value}>
+                                {option.label} {option.phone ? `(${option.phone})` : ''}
+                            </option>
+                        ))}
+                    </select>
+                )}
             </div>
 
             <div className="filter-group">
@@ -299,6 +541,63 @@ function FilterBar({ filters, onFilterChange, onSearch, onSort, sortField, sortD
                     <Download size={16} />
                 </button>
             </div>
+
+            {/* Active filters summary */}
+            {(filters.crop || filters.season || filters.year || filters.quality || filters.status || filters.buyer) && (
+                <div className="active-filters">
+                    <span className="active-filters-label">{t('active_filters')}:</span>
+                    {filters.crop && (
+                        <span className="filter-tag">
+                            {t('crop')}: {filters.crop}
+                            <X size={12} onClick={() => onFilterChange('crop', '')} />
+                        </span>
+                    )}
+                    {filters.season && (
+                        <span className="filter-tag">
+                            {t('season')}: {seasons.find(s => s.value === filters.season)?.label || filters.season}
+                            <X size={12} onClick={() => onFilterChange('season', '')} />
+                        </span>
+                    )}
+                    {filters.year && (
+                        <span className="filter-tag">
+                            {t('year')}: {filters.year}
+                            <X size={12} onClick={() => onFilterChange('year', '')} />
+                        </span>
+                    )}
+                    {filters.quality && (
+                        <span className="filter-tag">
+                            {t('quality')}: {qualityOptions.find(q => q.value === filters.quality)?.label || filters.quality}
+                            <X size={12} onClick={() => onFilterChange('quality', '')} />
+                        </span>
+                    )}
+                    {filters.status && (
+                        <span className="filter-tag">
+                            {t('status')}: {statusOptions.find(s => s.value === filters.status)?.label || filters.status}
+                            <X size={12} onClick={() => onFilterChange('status', '')} />
+                        </span>
+                    )}
+                    {filters.buyer && (
+                        <span className="filter-tag">
+                            {t('buyer')}: {buyerOptions.find(b => b.value.toString() === filters.buyer)?.label || filters.buyer}
+                            <X size={12} onClick={() => onFilterChange('buyer', '')} />
+                        </span>
+                    )}
+                    <button
+                        className="clear-filters-btn"
+                        onClick={() => {
+                            onFilterChange('crop', '');
+                            onFilterChange('season', '');
+                            onFilterChange('year', '');
+                            onFilterChange('quality', '');
+                            onFilterChange('status', '');
+                            onFilterChange('buyer', '');
+                            onFilterChange('search', '');
+                        }}
+                    >
+                        {t('clear_all')}
+                    </button>
+                </div>
+            )}
         </div>
     );
 }
@@ -677,8 +976,8 @@ function StandardDetailModal({ standard, onClose, onEdit, onDelete, t }) {
                                         <div key={item.id} className="timeline-item">
                                             <div className="timeline-badge" style={{
                                                 backgroundColor: item.action === 'create' ? '#e8f5e9' :
-                                                                 item.action === 'update' ? '#e3f2fd' :
-                                                                 item.action === 'delete' ? '#ffebee' : '#fff7ed'
+                                                    item.action === 'update' ? '#e3f2fd' :
+                                                        item.action === 'delete' ? '#ffebee' : '#fff7ed'
                                             }}>
                                                 {item.action === 'create' && <Plus size={16} />}
                                                 {item.action === 'update' && <Edit2 size={16} />}
@@ -755,7 +1054,8 @@ function StandardFormModal({ isOpen, onClose, onSubmit, buyers, editingStandard,
         } else {
             setForm({
                 ...emptyStandardForm,
-                harvest_year: new Date().getFullYear()
+                harvest_year: new Date().getFullYear(),
+                buyer_id: "" // Empty means create for self (admin)
             });
         }
     }, [editingStandard]);
@@ -790,9 +1090,7 @@ function StandardFormModal({ isOpen, onClose, onSubmit, buyers, editingStandard,
             newErrors.max_quantity = t('max_less_than_min');
         }
 
-        if (!form.buyer_id && !editingStandard) {
-            newErrors.buyer_id = t('buyer_required');
-        }
+        // Buyer ID is optional - if not provided, it will be created for the admin
 
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
@@ -806,7 +1104,9 @@ function StandardFormModal({ isOpen, onClose, onSubmit, buyers, editingStandard,
                 ...form,
                 price_per_kg: parseFloat(form.price_per_kg),
                 min_quantity: parseFloat(form.min_quantity),
-                max_quantity: form.max_quantity ? parseFloat(form.max_quantity) : null
+                max_quantity: form.max_quantity ? parseFloat(form.max_quantity) : null,
+                // If buyer_id is empty string, don't send it (backend will assign to current admin)
+                ...(form.buyer_id === "" && { buyer_id: undefined })
             };
             await onSubmit(payload);
         } catch (error) {
@@ -834,24 +1134,27 @@ function StandardFormModal({ isOpen, onClose, onSubmit, buyers, editingStandard,
                 </div>
 
                 <div className="modal-body">
-                    {!editingStandard && (
-                        <div className="form-group">
-                            <label>{t('buyer')} *</label>
-                            <select
-                                className={`form-control ${errors.buyer_id ? 'error' : ''}`}
-                                value={form.buyer_id}
-                                onChange={(e) => handleChange('buyer_id', e.target.value)}
-                            >
-                                <option value="">{t('select_buyer')}</option>
-                                {buyers.map(buyer => (
-                                    <option key={buyer.id} value={buyer.id}>
-                                        {buyer.full_name} - {buyer.phone_number}
-                                    </option>
-                                ))}
-                            </select>
-                            {errors.buyer_id && <div className="error-message">{errors.buyer_id}</div>}
-                        </div>
-                    )}
+                    {/* Buyer Selection - Optional */}
+                    <div className="form-group">
+                        <label>
+                            {t('buyer')}
+                            <span className="optional-label">{t('optional')}</span>
+                            <span className="help-text">{t('leave_empty_for_self')}</span>
+                        </label>
+                        <select
+                            className={`form-control ${errors.buyer_id ? 'error' : ''}`}
+                            value={form.buyer_id}
+                            onChange={(e) => handleChange('buyer_id', e.target.value)}
+                        >
+                            <option value="">{t('assign_to_myself')} ({t('admin')})</option>
+                            {buyers.map(buyer => (
+                                <option key={buyer.id} value={buyer.id}>
+                                    {buyer.full_name} - {buyer.phone_number}
+                                </option>
+                            ))}
+                        </select>
+                        {errors.buyer_id && <div className="error-message">{errors.buyer_id}</div>}
+                    </div>
 
                     <div className="form-row">
                         <div className="form-group">
@@ -917,7 +1220,9 @@ function StandardFormModal({ isOpen, onClose, onSubmit, buyers, editingStandard,
                                 onChange={(e) => handleChange('quality_grade', e.target.value)}
                             >
                                 {qualityGrades.map(grade => (
-                                    <option key={grade.value} value={grade.value}>{grade.label}</option>
+                                    <option key={grade.value} value={grade.value}>
+                                        {grade.icon} {grade.label}
+                                    </option>
                                 ))}
                             </select>
                         </div>
@@ -953,7 +1258,7 @@ function StandardFormModal({ isOpen, onClose, onSubmit, buyers, editingStandard,
                         </div>
 
                         <div className="form-group">
-                            <label>{t('max_quantity')} (kg) {t('optional')}</label>
+                            <label>{t('max_quantity')} (kg) <span className="optional-label">{t('optional')}</span></label>
                             <input
                                 type="number"
                                 step="0.01"
@@ -967,15 +1272,20 @@ function StandardFormModal({ isOpen, onClose, onSubmit, buyers, editingStandard,
                         </div>
                     </div>
 
+                    {/* Location Selector */}
                     <div className="form-group">
-                        <label>{t('preferred_location')} {t('optional')}</label>
-                        <input
-                            type="text"
-                            className="form-control"
+                        <label>
+                            <MapPin size={16} />
+                            {t('preferred_location')}
+                            <span className="optional-label">{t('optional')}</span>
+                        </label>
+                        <LocationSelector
                             value={form.preferred_location}
-                            onChange={(e) => handleChange('preferred_location', e.target.value)}
-                            placeholder={t('enter_preferred_location')}
+                            onChange={(value) => handleChange('preferred_location', value)}
+                            error={errors.preferred_location}
+                            t={t}
                         />
+                        {errors.preferred_location && <div className="error-message">{errors.preferred_location}</div>}
                     </div>
 
                     <div className="form-group">
@@ -992,7 +1302,7 @@ function StandardFormModal({ isOpen, onClose, onSubmit, buyers, editingStandard,
                     </div>
 
                     <div className="form-group">
-                        <label>{t('description')} {t('optional')}</label>
+                        <label>{t('description')} <span className="optional-label">{t('optional')}</span></label>
                         <textarea
                             className="form-control"
                             rows="4"
@@ -1044,6 +1354,15 @@ export default function AdminStandardsManagement() {
     const [totalItems, setTotalItems] = useState(0);
     const [totalPages, setTotalPages] = useState(1);
 
+    const formatLocationString = (parts) =>
+        [parts.province, parts.district, parts.sector].filter(Boolean).join(', ');
+
+    const parseLocationString = (str) => {
+        if (!str) return { province: "", district: "", sector: "" };
+        const [province = "", district = "", sector = ""] = str.split(',').map(p => p.trim());
+        return { province, district, sector };
+    };
+
     // ── Filter / sort state ──────────────────────────────────────────────────────
     const [filters, setFilters] = useState({
         crop: '',
@@ -1051,6 +1370,7 @@ export default function AdminStandardsManagement() {
         year: '',
         quality: '',
         status: '',
+        buyer: '',
         search: ''
     });
     const [sortField, setSortField] = useState('created_at');
@@ -1108,7 +1428,7 @@ export default function AdminStandardsManagement() {
         try {
             const response = await axios({
                 method: 'GET',
-                url: 'http://127.0.0.1:8000/users/?role=buyer&page_size=100',
+                url: 'http://127.0.0.1:8000/users/buyers/',
                 headers: {
                     'Authorization': `Bearer ${getAuthToken()}`,
                     'Accept-Language': getUserLanguage()
@@ -1141,6 +1461,7 @@ export default function AdminStandardsManagement() {
                 ...(params.filtersArg.year && { year: params.filtersArg.year }),
                 ...(params.filtersArg.quality && { quality: params.filtersArg.quality }),
                 ...(params.filtersArg.status && { status: params.filtersArg.status }),
+                ...(params.filtersArg.buyer && { buyer: params.filtersArg.buyer }),
                 ...(params.filtersArg.search && { search: params.filtersArg.search })
             });
 
@@ -1521,6 +1842,62 @@ export default function AdminStandardsManagement() {
                     outline: none;
                     border-color: #2d5a2d;
                     box-shadow: 0 0 0 3px rgba(45,90,45,0.1);
+                }
+
+                .active-filters {
+                    display: flex;
+                    flex-wrap: wrap;
+                    align-items: center;
+                    gap: 8px;
+                    padding: 8px 0 0;
+                    width: 100%;
+                    border-top: 1px solid #e2e8f0;
+                    margin-top: 8px;
+                }
+
+                .active-filters-label {
+                    font-size: 12px;
+                    font-weight: 600;
+                    color: #64748b;
+                }
+
+                .filter-tag {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 4px;
+                    padding: 4px 8px;
+                    background: #f1f5f9;
+                    border-radius: 6px;
+                    font-size: 12px;
+                    color: #1e293b;
+                }
+
+                .filter-tag svg {
+                    cursor: pointer;
+                    opacity: 0.6;
+                    transition: opacity 0.2s ease;
+                }
+
+                .filter-tag svg:hover {
+                    opacity: 1;
+                    color: #b91c1c;
+                }
+
+                .clear-filters-btn {
+                    padding: 4px 8px;
+                    border: 1px solid #e2e8f0;
+                    background: white;
+                    border-radius: 6px;
+                    font-size: 12px;
+                    color: #64748b;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                }
+
+                .clear-filters-btn:hover {
+                    background: #fee2e2;
+                    border-color: #b91c1c;
+                    color: #b91c1c;
                 }
 
                 .search-wrapper {
@@ -2067,6 +2444,80 @@ export default function AdminStandardsManagement() {
                     background: white;
                 }
 
+
+                .optional-label {
+                    font-size: 11px;
+                    font-weight: normal;
+                    color: #94a3b8;
+                    margin-left: 4px;
+                    background: #f1f5f9;
+                    padding: 2px 6px;
+                    border-radius: 4px;
+                }
+
+                .help-text {
+                    display: block;
+                    font-size: 11px;
+                    font-weight: normal;
+                    color: #64748b;
+                    margin-top: 4px;
+                }
+
+                /* Location Selector Styles */
+                .location-selector {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 12px;
+                }
+
+                .location-row {
+                    width: 100%;
+                }
+
+                .location-select {
+                    width: 100%;
+                    padding: 12px 16px;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 12px;
+                    font-size: 14px;
+                    background: white;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                }
+
+                .location-select:focus {
+                    outline: none;
+                    border-color: #2d5a2d;
+                    box-shadow: 0 0 0 3px rgba(45,90,45,0.1);
+                }
+
+                .location-select.error {
+                    border-color: #dc2626;
+                }
+
+                .location-select:disabled {
+                    background: #f8fafc;
+                    cursor: not-allowed;
+                    opacity: 0.6;
+                }
+
+                .location-hint {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    padding: 8px 12px;
+                    background: #f0fdf4;
+                    border-radius: 8px;
+                    color: #166534;
+                    font-size: 13px;
+                }
+
+                /* Form group with icon */
+                .form-group label svg {
+                    margin-right: 8px;
+                    vertical-align: middle;
+                }
+
                 /* Detail Modal Styles */
                 .standard-detail-summary {
                     display: grid;
@@ -2611,6 +3062,7 @@ export default function AdminStandardsManagement() {
                 sortDirection={sortDirection}
                 viewMode={viewMode}
                 onViewModeChange={setViewMode}
+                standards={standards} // Pass the standards data
             />
 
             {/* Standards Display */}

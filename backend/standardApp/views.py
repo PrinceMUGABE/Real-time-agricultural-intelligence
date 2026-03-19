@@ -98,7 +98,7 @@ def create_crop_standard(request):
     Create a new crop standard.
     Only buyers can create standards.
     """
-    logger.info(f"User {request.user.phone_number} is creating crop standard with data: {request.data}")
+    print(f"User {request.user.phone_number} is creating crop standard with data: {request.data}")
     lang = get_language(request)
 
     # Check if user is a buyer
@@ -112,7 +112,7 @@ def create_crop_standard(request):
     )
 
     if not serializer.is_valid():
-        logger.error(f"Validation failed in create_crop_standard: {serializer.errors}")
+        print(f"Validation failed in create_crop_standard: {serializer.errors}")
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     try:
@@ -151,7 +151,7 @@ def create_crop_standard(request):
             )
             
     except ValidationError as exc:
-        logger.error(f"ValidationError in create_crop_standard: {exc}")
+        print(f"ValidationError in create_crop_standard: {exc}")
         return Response(
             {
                 'error': exc.message if hasattr(exc, 'message') else str(exc),
@@ -330,7 +330,7 @@ def update_crop_standard(request, standard_id):
         )
 
         if not serializer.is_valid():
-            logger.error(f"Validation failed in update_crop_standard: {serializer.errors}")
+            print(f"Validation failed in update_crop_standard: {serializer.errors}")
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         with transaction.atomic():
@@ -365,7 +365,7 @@ def update_crop_standard(request, standard_id):
         })
 
     except ValidationError as exc:
-        logger.error(f"ValidationError in update_crop_standard: {exc}")
+        print(f"ValidationError in update_crop_standard: {exc}")
         return Response(
             {
                 'error': exc.message if hasattr(exc, 'message') else str(exc),
@@ -427,55 +427,45 @@ def delete_crop_standard(request, standard_id):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_buyer_standards_summary(request):
-    """
-    Get summary statistics for the logged-in buyer's standards.
-    """
+    """Get summary statistics for the logged-in buyer's standards."""
     lang = get_language(request)
     guard = _require_buyer(request, lang)
     if guard:
         return guard
-
+ 
     try:
         standards = CropStandard.objects.filter(created_by=request.user)
-
+ 
         total = standards.count()
         active = standards.filter(status='active').count()
         inactive = standards.filter(status='inactive').count()
         expired = standards.filter(status='expired').count()
-
-        # Calculate total potential value
+ 
         total_value = 0
         for standard in standards.filter(status='active'):
             if standard.max_quantity:
                 total_value += float(standard.price_per_kg) * float(standard.max_quantity)
-
-        # Average price
+ 
         avg_price = standards.filter(status='active').aggregate(
             avg=models.Avg('price_per_kg')
         )['avg'] or 0
-
-        # Group by crop
-        by_crop = dict(
-            standards.values_list('crop_name').annotate(count=models.Count('id'))
-        )
-
-        # Group by season
+ 
+        by_crop = dict(standards.values_list('crop_name').annotate(count=models.Count('id')))
+ 
         by_season = {}
         for season_code, season_name in CropStandard.SEASONS:
             count = standards.filter(season=season_code).count()
             if count > 0:
                 by_season[season_name] = count
-
-        # Group by quality
+ 
         by_quality = {}
         for grade, grade_name in CropStandard.QUALITY_GRADES:
             count = standards.filter(quality_grade=grade).count()
             if count > 0:
                 by_quality[grade_name] = count
-
-        # Recent standards
+ 
         recent = standards.select_related('created_by').order_by('-created_at')[:5]
-
+ 
         summary = {
             'total_standards': total,
             'active_standards': active,
@@ -490,15 +480,13 @@ def get_buyer_standards_summary(request):
                 recent, many=True, context={'request': request, 'lang': lang}
             ).data,
         }
-
-        serializer = CropStandardSummarySerializer(data=summary)
-        serializer.is_valid()
-        return Response(serializer.data)
-
+ 
+        return Response(summary)
+ 
     except Exception as exc:
         return _log_and_respond(exc, 'get_buyer_standards_summary', lang,
                               status.HTTP_500_INTERNAL_SERVER_ERROR, 'server_error')
-
+ 
 
 # ==================== ADMIN ENDPOINTS ====================
 
@@ -506,9 +494,11 @@ def get_buyer_standards_summary(request):
 @permission_classes([IsAuthenticated])
 def admin_create_crop_standard(request):
     """
-    Admin creates a crop standard for any buyer.
+    Admin creates a crop standard.
+    - If buyer_id is provided: creates for that buyer
+    - If no buyer_id provided: creates for themselves (admin)
     """
-    logger.info(f"Admin {request.user.phone_number} is creating crop standard with data: {request.data}")
+    print(f"Admin {request.user.phone_number} is creating crop standard with data: {request.data}")
     lang = get_language(request)
 
     # Check if user is admin
@@ -517,44 +507,54 @@ def admin_create_crop_standard(request):
         return guard
 
     buyer_id = request.data.get('buyer_id')
-    if not buyer_id:
-        return Response(
-            {'error': 'buyer_id is required'},
-            status=status.HTTP_400_BAD_REQUEST
-        )
+    
+    # Determine the buyer (creator of the standard)
+    if buyer_id:
+        # Admin is creating for a specific buyer
+        from userApp.models import CustomUser
+        try:
+            buyer = CustomUser.objects.get(id=buyer_id, role='buyer')
+        except CustomUser.DoesNotExist:
+            return Response(
+                {'error': 'Buyer not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+    else:
+        # Admin is creating for themselves
+        buyer = request.user
+        # Note: The user will still be an admin, but we'll override in serializer context
 
-    from userApp.models import CustomUser
-    try:
-        buyer = CustomUser.objects.get(id=buyer_id, role='buyer')
-    except CustomUser.DoesNotExist:
-        return Response(
-            {'error': 'Buyer not found'},
-            status=status.HTTP_404_NOT_FOUND
-        )
-
+    # Add the buyer info to serializer context
     serializer = CropStandardSerializer(
         data=request.data,
-        context={'request': request, 'lang': lang},
+        context={
+            'request': request, 
+            'lang': lang,
+            'is_admin_creating': True,  # Add this flag
+            'target_buyer': buyer  # Add the target buyer
+        },
     )
 
     if not serializer.is_valid():
-        logger.error(f"Validation failed in admin_create_crop_standard: {serializer.errors}")
+        print(f"Validation failed in admin_create_crop_standard: {serializer.errors}")
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     try:
         with transaction.atomic():
+            # Create the standard with the determined buyer as created_by
             standard = serializer.save(created_by=buyer)
             _create_history_record(standard, 'create', request.user)
 
-            # Notify the buyer
-            notify_user(
-                receiver=buyer,
-                title=nt('standard_created_title', lang),
-                description=nt('standard_created_desc', lang,
-                             crop=standard.crop_name,
-                             price=standard.price_per_kg),
-                sender=request.user
-            )
+            # Notify the buyer if it's not the admin
+            if buyer.id != request.user.id:
+                notify_user(
+                    receiver=buyer,
+                    title=nt('standard_created_title', lang),
+                    description=nt('standard_created_desc', lang,
+                                 crop=standard.crop_name,
+                                 price=standard.price_per_kg),
+                    sender=request.user
+                )
 
         return Response(
             {
@@ -567,7 +567,7 @@ def admin_create_crop_standard(request):
         )
 
     except ValidationError as exc:
-        logger.error(f"ValidationError in admin_create_crop_standard: {exc}")
+        print(f"ValidationError in admin_create_crop_standard: {exc}")
         return Response(
             {
                 'error': exc.message if hasattr(exc, 'message') else str(exc),
@@ -578,6 +578,7 @@ def admin_create_crop_standard(request):
     except Exception as exc:
         return _log_and_respond(exc, 'admin_create_crop_standard', lang,
                               status.HTTP_500_INTERNAL_SERVER_ERROR, 'server_error')
+
 
 
 @api_view(['GET'])
@@ -700,6 +701,7 @@ def admin_update_crop_standard(request, standard_id):
     """
     Admin updates any crop standard.
     """
+    print(f"Admin {request.user.phone_number} is updating crop standard {standard_id} with data: {request.data}")
     lang = get_language(request)
     guard = _require_admin(request, lang)
     if guard:
@@ -729,7 +731,7 @@ def admin_update_crop_standard(request, standard_id):
         )
 
         if not serializer.is_valid():
-            logger.error(f"Validation failed in admin_update_crop_standard: {serializer.errors}")
+            print(f"Validation failed in admin_update_crop_standard: {serializer.errors}")
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         with transaction.atomic():
@@ -764,7 +766,7 @@ def admin_update_crop_standard(request, standard_id):
         })
 
     except ValidationError as exc:
-        logger.error(f"ValidationError in admin_update_crop_standard: {exc}")
+        print(f"ValidationError in admin_update_crop_standard: {exc}")
         return Response(
             {
                 'error': exc.message if hasattr(exc, 'message') else str(exc),

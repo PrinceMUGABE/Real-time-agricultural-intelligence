@@ -176,6 +176,18 @@ def get_my_notifications(request):
     except Exception as exc:
         logger.exception("get_my_notifications: %s", exc)
         return Response({"error": nt("server_error", lang)}, status=500)
+    
+    
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def get_my_unread_notifications(request):
+    lang = _lang(request)
+    try:
+        qs = Notification.objects.select_related("sender", "receiver").filter(receiver=request.user, status="unread")
+        return Response({"notifications": _many(qs)}, status=200)
+    except Exception as exc:
+        logger.exception("get_my_un_read_notifications: %s", exc)
+        return Response({"error": nt("server_error", lang)}, status=500)
 
 
 @api_view(["GET"])

@@ -1301,7 +1301,7 @@ export default function BuyerLayout() {
 
     try {
       setLoading(true);
-      const response = await fetch(`${BASE_URL}/notifications/`, {
+      const response = await fetch(`${BASE_URL}/notifications/get_my_unread_notifications/`, {
         headers: {
           "Authorization": `Bearer ${token}`,
           "Accept-Language": i18n.language
@@ -1650,7 +1650,7 @@ export default function BuyerLayout() {
     { icon: <LayoutDashboard size={17} />, label: t("nav.dashboard", { defaultValue: "Dashboard" }), path: "/admin", end: true },
     { icon: <Handshake size={17} />, label: t("nav.marketMatches", { defaultValue: "Market Matches" }), path: "/admin/market-matches" },
     { icon: <Wheat size={17} />, label: t("nav.farmers", { defaultValue: "Farmers" }), path: "/admin/farmers" },
-    { icon: <Users size={17} />, label: t("nav.users", { defaultValue: "Users" }), path: "/admin/users" },
+    { icon: <FileText size={17} />, label: t("nav.standards", { defaultValue: "Standards" }), path: "/buyer/standards" },
     { icon: <BarChart2 size={17} />, label: t("nav.transactions", { defaultValue: "Transactions" }), path: "/admin/transactions" },
     { icon: <ClipboardList size={17} />, label: t("nav.dataEntry", { defaultValue: "Data Entry" }), path: "/admin/crops" },
     { icon: <FileText size={17} />, label: t("nav.contracts", { defaultValue: "Contracts" }), path: "/admin/contracts" },
@@ -2392,7 +2392,7 @@ export default function BuyerLayout() {
                       <Edit3 size={15} className="action-icon" style={{ marginLeft: "-4px", marginRight: "-4px" }} />
                       {t("profile.edit_profile", { defaultValue: "Edit Profile" })}
                     </button>
-                    <button className="profile-action-item" onClick={() => { navigate("/admin/messages"); setProfileOpen(false); }}>
+                    <button className="profile-action-item" onClick={() => { navigate("/buyer/chats"); setProfileOpen(false); }}>
                       <MessageSquare size={15} className="action-icon" />
                       {t("topbar.messages", { defaultValue: "Messages" })}
                       <span style={{ marginLeft: "auto", background: "#ef4444", color: "#fff", fontSize: 10, fontWeight: 700, borderRadius: 20, padding: "1px 6px" }}>3</span>

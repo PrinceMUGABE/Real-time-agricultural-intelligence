@@ -12,6 +12,7 @@ urlpatterns = [
     path("unread/",        views.get_unread_notifications), # GET
     path("read/",          views.get_read_notifications),   # GET
     path("mark-all-read/", views.mark_all_notifications_read),  # PATCH
+    path("get_my_unread_notifications/", views.get_my_unread_notifications),  # GET
 
     # ── Per-notification actions ───────────────────────────────────────────────
     path("<int:notification_id>/mark-read/", views.mark_notification_read),  # PATCH

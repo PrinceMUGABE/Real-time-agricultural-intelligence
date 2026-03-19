@@ -24,6 +24,7 @@ urlpatterns = [
 
     # ── Admin ──────────────────────────────────────────────────────────────
     path('users/',                     views.list_all_users),
+    path('users/buyers/',              views.list_all_buyers),  # ← NEW
     path('users/create/',              views.admin_create_user),
     path('users/<int:user_id>/',       views.get_user_by_id),
     path('users/<int:user_id>/update/', views.update_user),

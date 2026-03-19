@@ -82,6 +82,8 @@ INSTALLED_APPS = [
     'notificationApp',
     'stockApp',
     'standardApp',
+    'chatApp',
+    'contractApp',
 ]
 
 MIDDLEWARE = [

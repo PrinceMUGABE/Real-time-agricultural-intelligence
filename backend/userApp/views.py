@@ -576,6 +576,16 @@ def list_all_users(request):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+def list_all_buyers(request):
+    err = _admin_required(request)
+    if err:
+        return err
+    users = CustomUser.objects.filter(role='buyer').order_by('-created_at')
+    return Response({"users": UserSerializer(users, many=True).data}, status=200)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def get_user_by_id(request, user_id):
     err = _admin_required(request)
     if err:

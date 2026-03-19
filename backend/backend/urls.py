@@ -11,6 +11,8 @@ urlpatterns = [
     path('notifications/', include('notificationApp.urls')),
     path('stock/', include('stockApp.urls')),
     path('standard/', include('standardApp.urls')),
+    path('chat/', include('chatApp.urls')),
+    path('contract/', include('contractApp.urls')),
 ]
 
 if settings.DEBUG:

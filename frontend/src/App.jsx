@@ -12,6 +12,7 @@ import FarmersPage from './component/pages/admin/ManageFarmers';
 import UserManagement from './component/pages/admin/UserManagement';
 import ContractsManagement from './component/pages/admin/ManageContracts';
 import AdminStandardsManagement from './component/pages/admin/ManageStandards';
+import AdminChatManagement from './component/pages/admin/ChatManagement';
 
 
 
@@ -19,11 +20,14 @@ import AdminStandardsManagement from './component/pages/admin/ManageStandards';
 import FarmerLayout from './component/pages/farmer/Layout';
 import FarmerDashboard from './component/pages/farmer/Dashboard';
 import MyStockManagement from './component/pages/farmer/MyStocks';
+import FarmerChatPage from './component/pages/farmer/FarmerChatManagement';
 
 
 //Buyer Pages
 import BuyerLayout from './component/pages/buyer/Layout';
 import BuyerDashboard from './component/pages/buyer/Dashboard';
+import BuyerStandardsManagement from './component/pages/buyer/MyStandards';
+import BuyerChatPage from './component/pages/buyer/BuyerChatManagement';
 
 
 function App() {
@@ -51,18 +55,21 @@ function App() {
             <Route path="users" element={<UserManagement />} />
             <Route path="contracts" element={<ContractsManagement />} />
             <Route path="standards" element={<AdminStandardsManagement />} />
+            <Route path="chats" element={<AdminChatManagement />} />
           </Route>
 
 
           <Route path="/farmer" element={<FarmerLayout />}>
             <Route path="dashboard" element={<FarmerDashboard />} />
             <Route path="myStocks" element={<MyStockManagement />} />
+            <Route path="chats" element={<FarmerChatPage />} />
           </Route>
 
 
           <Route path="/buyer" element={<BuyerLayout />}>
             <Route path="dashboard" element={<BuyerDashboard />} />
-           
+            <Route path="standards" element={<BuyerStandardsManagement />} />
+            <Route path="chats" element={<BuyerChatPage />} />
           </Route>
 
 

@@ -2392,7 +2392,7 @@ export default function FarmerLayout() {
                       <Edit3 size={15} className="action-icon" style={{ marginLeft: "-4px", marginRight: "-4px" }} />
                       {t("profile.edit_profile", { defaultValue: "Edit Profile" })}
                     </button>
-                    <button className="profile-action-item" onClick={() => { navigate("/admin/messages"); setProfileOpen(false); }}>
+                    <button className="profile-action-item" onClick={() => { navigate("/farmer/chats"); setProfileOpen(false); }}>
                       <MessageSquare size={15} className="action-icon" />
                       {t("topbar.messages", { defaultValue: "Messages" })}
                       <span style={{ marginLeft: "auto", background: "#ef4444", color: "#fff", fontSize: 10, fontWeight: 700, borderRadius: 20, padding: "1px 6px" }}>3</span>
