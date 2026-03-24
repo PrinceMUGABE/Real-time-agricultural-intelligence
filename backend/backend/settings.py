@@ -84,6 +84,7 @@ INSTALLED_APPS = [
     'standardApp',
     'chatApp',
     'contractApp',
+    'marketMatchingApp',
 ]
 
 MIDDLEWARE = [

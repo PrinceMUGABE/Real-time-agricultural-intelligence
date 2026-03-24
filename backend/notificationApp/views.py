@@ -1,20 +1,5 @@
 """
 notificationApp/views.py
-
-Endpoints
-─────────────────────────────────────────────────────────────────────────────
-Admin only
-  POST   /api/notifications/send/             – send to all | farmers | buyers | single
-  GET    /api/notifications/all/              – every notification in the system
-  GET    /api/notifications/sent/             – notifications sent by logged-in admin
-
-Authenticated user (own inbox)
-  GET    /api/notifications/                  – all notifications for logged-in user
-  GET    /api/notifications/unread/           – unread inbox
-  GET    /api/notifications/read/             – read inbox
-  PATCH  /api/notifications/mark-all-read/   – mark all unread as read
-  PATCH  /api/notifications/<id>/mark-read/  – mark one as read
-  DELETE /api/notifications/<id>/delete/     – delete ONE read notification
 """
 
 import logging

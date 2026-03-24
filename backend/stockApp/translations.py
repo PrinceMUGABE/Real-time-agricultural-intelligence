@@ -87,13 +87,13 @@ TRANSLATIONS = {
         'en': 'You can only modify your own stocks',
         'fr': 'Vous ne pouvez modifier que vos propres stocks',
         'sw': 'Unaweza kubadilisha hisa zako tu',
-        'rw': 'Ushobora guhindura ibitonyanga byawe gusa',
+        'rw': 'Ushobora guhindura ibihingwa byawe gusa',
     },
     'farmer_only': {
-        'en': 'Only farmers can create stocks',
-        'fr': 'Seuls les agriculteurs peuvent créer des stocks',
-        'sw': 'Wakulima pekee wanaweza kuunda hisa',
-        'rw': 'Abahinzi gusa bashobora gushyiraho ibitonyanga',
+        'en': 'Only farmers and admins can create stocks',
+        'fr': 'Seuls les agriculteurs et les administrateurs peuvent créer des stocks',
+        'sw': 'Wakulima na wadmins pekee wanaweza kuunda hisa',
+        'rw': 'Abahinzi na abayobozi gusa bashobora gushyiraho ibihingwa',
     },
     
     # Notifications

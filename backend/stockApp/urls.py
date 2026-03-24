@@ -31,6 +31,7 @@ urlpatterns = [
     path('stocks/<int:stock_id>/delete/', views.delete_stock, name='delete_stock'),
     
     # Stock movements
+    path('stocks/<int:stock_id>/movements/', views.list_stock_movements, name='list_stock_movements'),
     path('movements/', views.list_movements, name='list_movements'),
     path('movements/create/', views.create_movement, name='create_movement'),
     path('movements/<int:movement_id>/', views.get_movement_detail, name='movement_detail'),

@@ -11,7 +11,8 @@ import {
   Loader2, ClipboardList, Edit3, Calendar, Clock,
   CheckCircle, XCircle, AlertCircle, Save, Eye, EyeOff,
   Key, RefreshCw, Home, BellRing, BellOff, Info,
-  User, Clock3, ChevronRight
+  User, Clock3, ChevronRight, Car, Database,
+  MessageCircle, ShoppingBag,
 } from "lucide-react";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -1647,13 +1648,13 @@ export default function BuyerLayout() {
 
   // Nav items
   const navItems = [
-    { icon: <LayoutDashboard size={17} />, label: t("nav.dashboard", { defaultValue: "Dashboard" }), path: "/admin", end: true },
-    { icon: <Handshake size={17} />, label: t("nav.marketMatches", { defaultValue: "Market Matches" }), path: "/admin/market-matches" },
-    { icon: <Wheat size={17} />, label: t("nav.farmers", { defaultValue: "Farmers" }), path: "/admin/farmers" },
+    { icon: <LayoutDashboard size={17} />, label: t("nav.dashboard", { defaultValue: "Dashboard" }), path: "/buyer", end: true },
+    { icon: <Handshake size={17} />, label: t("nav.marketMatches", { defaultValue: "Market Matches" }), path: "/buyer/market-matches" },
+    { icon: <Wheat size={17} />, label: t("nav.farmers", { defaultValue: "Farmers" }), path: "/buyer/farmers" },
     { icon: <FileText size={17} />, label: t("nav.standards", { defaultValue: "Standards" }), path: "/buyer/standards" },
-    { icon: <BarChart2 size={17} />, label: t("nav.transactions", { defaultValue: "Transactions" }), path: "/admin/transactions" },
-    { icon: <ClipboardList size={17} />, label: t("nav.dataEntry", { defaultValue: "Data Entry" }), path: "/admin/crops" },
-    { icon: <FileText size={17} />, label: t("nav.contracts", { defaultValue: "Contracts" }), path: "/admin/contracts" },
+    { icon: <BarChart2 size={17} />, label: t("nav.transactions", { defaultValue: "Transactions" }), path: "/buyer/transactions" },
+    { icon: <Wheat size={17} />, label: t("nav.dataEntry", { defaultValue: "Crop Stocks" }), path: "/buyer/stocks" },
+    { icon: <FileText size={17} />, label: t("nav.contracts", { defaultValue: "Contracts" }), path: "/buyer/contracts" },
   ];
 
   // Profile actions for sidebar

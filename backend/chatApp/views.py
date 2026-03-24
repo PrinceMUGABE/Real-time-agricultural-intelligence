@@ -883,6 +883,7 @@ def admin_get_all_chats(request):
         chat_type = request.GET.get('chat_type')
         status_filter = request.GET.get('status')
         search = request.GET.get('search')
+        participant_id = request.GET.get('participant_id')  # New filter
         
         # Build query
         queryset = ChatRoom.objects.all()
@@ -901,6 +902,14 @@ def admin_get_all_chats(request):
                 Q(user1__full_name__icontains=search) |
                 Q(user2__full_name__icontains=search)
             )
+        
+        # Filter by participant if specified
+        if participant_id:
+            queryset = queryset.filter(
+                Q(user1_id=participant_id) | 
+                Q(user2_id=participant_id) |
+                Q(participants__id=participant_id)
+            ).distinct()
         
         # Apply sorting
         sort_prefix = '' if sort_dir == 'asc' else '-'
@@ -945,6 +954,11 @@ def admin_get_all_chats(request):
         for chat in chats:
             chat_dict = ChatRoomSerializer(chat, context={'request': request}).data
             chat_dict['message_count'] = chat.messages.filter(is_deleted=False).count()
+            chat_dict['participants'] = ChatParticipantSerializer(
+                chat.chat_participants.select_related('user'), 
+                many=True, 
+                context={'request': request}
+            ).data
             chat_data.append(chat_dict)
         
         return Response({
@@ -959,7 +973,6 @@ def admin_get_all_chats(request):
         
     except Exception as e:
         return handle_exception(e, "Failed to fetch chats", request)
-
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -1170,16 +1183,7 @@ def admin_get_chat_details(request, room_id):
                 'updated_at': chat_room.updated_at,
                 'created_by': chat_room.created_by.full_name if chat_room.created_by else None,
                 'user1': UserBasicSerializer(chat_room.user1).data if chat_room.user1 else None,
-                'user2': UserBasicSerializer(chat_room.user2).data if chat_room.user2 else None,
-                'mentorship': {
-                    'id': chat_room.mentorship.id,
-                    'mentor': chat_room.mentorship.mentor.full_name,
-                    'mentee': chat_room.mentorship.mentee.full_name
-                } if chat_room.mentorship else None,
-                'department': {
-                    'id': chat_room.department.id,
-                    'name': chat_room.department.name
-                } if chat_room.department else None
+                'user2': UserBasicSerializer(chat_room.user2).data if chat_room.user2 else None
             },
             'participants': participant_data,
             'statistics': {
@@ -2025,3 +2029,71 @@ def extract_metadata(media_file, file_obj):
         
     except Exception as e:
         logger.error(f"Error extracting metadata: {e}")
+        
+        
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def admin_get_chat_by_id(request, room_id):
+    """Admin: Get a specific chat by ID"""
+    lang = get_user_language(request)
+    try:
+        user = request.user
+        
+        if user.role != 'admin':
+            return Response({
+                'error': ct("admin_required", lang)
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        chat_room = get_object_or_404(ChatRoom, id=room_id)
+        
+        serializer = ChatRoomSerializer(chat_room, context={'request': request})
+        data = serializer.data
+        data['participants'] = ChatParticipantSerializer(
+            chat_room.chat_participants.select_related('user'), 
+            many=True, 
+            context={'request': request}
+        ).data
+        data['message_count'] = chat_room.messages.filter(is_deleted=False).count()
+        
+        return Response({
+            'success': True,
+            'chat': data
+        })
+        
+    except Exception as e:
+        return handle_exception(e, "Failed to get chat", request)
+    
+    
+    
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def user_get_chat_by_id(request, room_id):
+    """User: Get a specific chat by ID"""
+    lang = get_user_language(request)
+    try:
+        user = request.user
+        
+        if user.role != 'admin' and not ChatRoom.objects.filter(id=room_id, participants=user).exists():
+            return Response({
+                'error': ct("admin_required", lang)
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        chat_room = get_object_or_404(ChatRoom, id=room_id)
+        
+        serializer = ChatRoomSerializer(chat_room, context={'request': request})
+        data = serializer.data
+        data['participants'] = ChatParticipantSerializer(
+            chat_room.chat_participants.select_related('user'), 
+            many=True, 
+            context={'request': request}
+        ).data
+        data['message_count'] = chat_room.messages.filter(is_deleted=False).count()
+        
+        return Response({
+            'success': True,
+            'chat': data
+        })
+        
+    except Exception as e:
+        return handle_exception(e, "Failed to get chat", request)

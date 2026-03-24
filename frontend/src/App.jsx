@@ -21,6 +21,7 @@ import FarmerLayout from './component/pages/farmer/Layout';
 import FarmerDashboard from './component/pages/farmer/Dashboard';
 import MyStockManagement from './component/pages/farmer/MyStocks';
 import FarmerChatPage from './component/pages/farmer/FarmerChatManagement';
+import FarmerMarketMatching from './component/pages/farmer/MarketMatching';
 
 
 //Buyer Pages
@@ -28,6 +29,8 @@ import BuyerLayout from './component/pages/buyer/Layout';
 import BuyerDashboard from './component/pages/buyer/Dashboard';
 import BuyerStandardsManagement from './component/pages/buyer/MyStandards';
 import BuyerChatPage from './component/pages/buyer/BuyerChatManagement';
+import BuyManageCrops from './component/pages/buyer/ShowStocks';
+import BuyerMarketMatching from './component/pages/buyer/MarketMarching';
 
 
 function App() {
@@ -63,6 +66,7 @@ function App() {
             <Route path="dashboard" element={<FarmerDashboard />} />
             <Route path="myStocks" element={<MyStockManagement />} />
             <Route path="chats" element={<FarmerChatPage />} />
+            <Route path="market-matches" element={<FarmerMarketMatching />} />
           </Route>
 
 
@@ -70,6 +74,9 @@ function App() {
             <Route path="dashboard" element={<BuyerDashboard />} />
             <Route path="standards" element={<BuyerStandardsManagement />} />
             <Route path="chats" element={<BuyerChatPage />} />
+            <Route path="stocks" element={<BuyManageCrops />} />
+            <Route path="market-matches" element={<BuyerMarketMatching />} />
+
           </Route>
 
 

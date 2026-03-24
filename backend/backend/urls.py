@@ -13,6 +13,7 @@ urlpatterns = [
     path('standard/', include('standardApp.urls')),
     path('chat/', include('chatApp.urls')),
     path('contract/', include('contractApp.urls')),
+    path('market-matching/', include('marketMatchingApp.urls')),
 ]
 
 if settings.DEBUG:

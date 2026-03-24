@@ -72,12 +72,12 @@ def _log_and_respond(exc, func_name, lang, http_status, message_key=None, messag
 def create_stock(request):
     """
     Create a new stock entry.
-    Only farmers can create stocks.
+    Only farmers and admins can create stocks.
     """
     print("User %s is creating stock with data: %s", request.user.phone_number, request.data)
     lang = get_language(request)
 
-    if request.user.role != 'farmer':
+    if request.user.role != 'farmer' and request.user.role != 'admin':
         return Response({'error': nt('farmer_only', lang)}, status=status.HTTP_403_FORBIDDEN)
 
     serializer = StockSerializer(
@@ -692,7 +692,7 @@ def resolve_alert(request, alert_id):
 
 def _require_farmer(request, lang):
     """Return a 403 Response if the user is not a farmer, else None."""
-    if request.user.role != 'farmer':
+    if request.user.role != 'farmer' and request.user.role != 'admin' and request.user.is_authenticated:
         return Response(
             {'error': 'This endpoint is only for farmers'},
             status=status.HTTP_403_FORBIDDEN,
@@ -952,6 +952,79 @@ def get_farmer_stock_movements(request, stock_id):
     except Exception as exc:
         return _log_and_respond(exc, 'get_farmer_stock_movements', lang,
                                 status.HTTP_500_INTERNAL_SERVER_ERROR, 'server_error')
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def list_stock_movements(request, stock_id):
+    lang = get_language(request)
+    
+    if not lang:
+        print("Language not specified in request")
+        return Response({'error': 'Language not specified'}, status=status.HTTP_400_BAD_REQUEST)
+
+    guard = _require_farmer(request, lang)
+    if guard:
+        print("User is not a farmer or not authenticated")
+        return guard
+
+    try:
+        from django.shortcuts import get_object_or_404
+        
+        print(f"\nFetching stock with ID {stock_id}\n")
+
+        stock = get_object_or_404(Stock, id=stock_id)
+        if not stock:
+            print(f"Stock with ID {stock_id} not found")
+            return Response({'error': _( 'stock_not_found', lang)}, status=status.HTTP_404_NOT_FOUND)
+
+        movements = stock.movements.all()
+        if not movements.exists():
+            print(f"No movements found for stock ID {stock_id}")
+            return Response({'error': _('no_movements_found', lang)}, status=status.HTTP_404_NOT_FOUND)
+
+        movement_type = request.query_params.get('type')
+        if movement_type:
+            movements = movements.filter(movement_type=movement_type)
+
+        from_date = request.query_params.get('from_date')
+        if from_date:
+            movements = movements.filter(created_at__date__gte=from_date)
+
+        to_date = request.query_params.get('to_date')
+        if to_date:
+            movements = movements.filter(created_at__date__lte=to_date)
+
+        page = int(request.query_params.get('page', 1))
+        page_size = int(request.query_params.get('page_size', 20))
+        start = (page - 1) * page_size
+        end = start + page_size
+
+        total = movements.count()
+        movements_page = movements.order_by('-created_at')[start:end]
+
+        serializer = StockMovementSerializer(
+            movements_page, many=True, context={'request': request, 'lang': lang}
+        )
+
+        return Response({
+            'status': 'success',
+            'stock_id': stock_id,
+            'stock_name': stock.product_name,
+            'current_quantity': float(stock.quantity),
+            'total': total,
+            'page': page,
+            'page_size': page_size,
+            'total_pages': (total + page_size - 1) // page_size,
+            'movements': serializer.data,
+        })
+
+    except Exception as exc:
+        print(f"Error in list_stock_movements for stock ID {stock_id}: {exc}")
+        return _log_and_respond(
+            exc, 'get_farmer_stock_movements', lang,
+            status.HTTP_500_INTERNAL_SERVER_ERROR, 'server_error'
+        )
 
 
 @api_view(['GET'])

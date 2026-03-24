@@ -17,6 +17,8 @@ import {
   CornerUpLeft, FileSpreadsheet, Square,
   Crown, User,
 } from "lucide-react";
+import { useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 function Info({ size = 16 }) {
   return (
@@ -31,16 +33,16 @@ function Info({ size = 16 }) {
 const API_BASE_URL = "http://127.0.0.1:8000";
 
 const CHAT_TYPES = {
-  global:     { label: "Global Chat",     Icon: Globe,         color: "#00a884", bg: "#d9fdd3" },
-  farmers:    { label: "Farmers Chat",    Icon: Users,         color: "#34B7F1", bg: "#e8f5fe" },
-  buyers:     { label: "Buyers Chat",     Icon: ShoppingBag,   color: "#F2A93B", bg: "#fff1d6" },
-  one_on_one: { label: "Direct Message",  Icon: MessageCircle, color: "#8696A0", bg: "#f0f0f0" },
+  global: { label: "Global Chat", Icon: Globe, color: "#00a884", bg: "#d9fdd3" },
+  farmers: { label: "Farmers Chat", Icon: Users, color: "#34B7F1", bg: "#e8f5fe" },
+  buyers: { label: "Buyers Chat", Icon: ShoppingBag, color: "#F2A93B", bg: "#fff1d6" },
+  one_on_one: { label: "Direct Message", Icon: MessageCircle, color: "#8696A0", bg: "#f0f0f0" },
 };
 
 const ROLES = {
-  admin:    { label: "Admin",    Icon: Crown, color: "#F2A93B", bg: "#fff1d6" },
-  member:   { label: "Member",   Icon: User,  color: "#34B7F1", bg: "#e8f5fe" },
-  observer: { label: "Observer", Icon: Eye,   color: "#8696A0", bg: "#f0f0f0" },
+  admin: { label: "Admin", Icon: Crown, color: "#F2A93B", bg: "#fff1d6" },
+  member: { label: "Member", Icon: User, color: "#34B7F1", bg: "#e8f5fe" },
+  observer: { label: "Observer", Icon: Eye, color: "#8696A0", bg: "#f0f0f0" },
 };
 
 /* ─── API client ─────────────────────────────────────────────────────────── */
@@ -65,12 +67,12 @@ function makeHttp() {
 const http = makeHttp();
 
 /* ─── Helpers ────────────────────────────────────────────────────────────── */
-const fmtTime     = ts => ts ? new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "";
-const fmtDate     = ts => ts ? new Date(ts).toLocaleDateString() : "";
+const fmtTime = ts => ts ? new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "";
+const fmtDate = ts => ts ? new Date(ts).toLocaleDateString() : "";
 const avatarLetter = name => (name || "?").charAt(0).toUpperCase();
-const humanSize   = bytes => {
+const humanSize = bytes => {
   if (!bytes) return "0 B";
-  const u = ["B","KB","MB","GB"]; let s = bytes;
+  const u = ["B", "KB", "MB", "GB"]; let s = bytes;
   for (const unit of u) { if (s < 1024) return `${s.toFixed(1)} ${unit}`; s /= 1024; }
   return `${s.toFixed(1)} TB`;
 };
@@ -87,19 +89,19 @@ function detectMediaType(url, explicitType) {
   const filename = decodeURIComponent(url.split("?")[0].split("/").pop()).toLowerCase();
   if (filename.startsWith("voice-")) return "audio";
   const t = (explicitType || "").toLowerCase().trim();
-  if (t === "image")                       return "image";
-  if (t === "video")                       return "video";
+  if (t === "image") return "image";
+  if (t === "video") return "video";
   if (t === "audio" || t === "voice_note") return "audio";
-  if (t === "pdf")                         return "pdf";
-  if (t === "word")                        return "word";
-  if (t === "excel")                       return "excel";
-  if (t === "document")                    return "doc";
+  if (t === "pdf") return "pdf";
+  if (t === "word") return "word";
+  if (t === "excel") return "excel";
+  if (t === "document") return "doc";
   if (filename.match(/\.(mp3|wav|ogg|m4a|aac|flac|opus|webm)$/)) return "audio";
-  if (filename.match(/\.(jpg|jpeg|png|gif|webp|svg|bmp)$/))       return "image";
-  if (filename.match(/\.(mp4|mov|avi|mkv|flv)$/))                 return "video";
-  if (filename.match(/\.pdf$/))                                    return "pdf";
-  if (filename.match(/\.(doc|docx)$/))                             return "word";
-  if (filename.match(/\.(xls|xlsx|csv)$/))                         return "excel";
+  if (filename.match(/\.(jpg|jpeg|png|gif|webp|svg|bmp)$/)) return "image";
+  if (filename.match(/\.(mp4|mov|avi|mkv|flv)$/)) return "video";
+  if (filename.match(/\.pdf$/)) return "pdf";
+  if (filename.match(/\.(doc|docx)$/)) return "word";
+  if (filename.match(/\.(xls|xlsx|csv)$/)) return "excel";
   return "file";
 }
 
@@ -110,7 +112,7 @@ async function downloadWithAuth(url, filename) {
       headers: { Authorization: `Bearer ${localStorage.getItem("access_token")}` },
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const blob   = await res.blob();
+    const blob = await res.blob();
     const blobUrl = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = blobUrl; a.download = filename;
@@ -122,13 +124,13 @@ async function downloadWithAuth(url, filename) {
 /* ─── Voice recorder hook ────────────────────────────────────────────────── */
 function useVoiceRecorder() {
   const [recording, setRecording] = useState(false);
-  const [url, setUrl]             = useState(null);
-  const [seconds, setSeconds]     = useState(0);
+  const [url, setUrl] = useState(null);
+  const [seconds, setSeconds] = useState(0);
   const [blobReady, setBlobReady] = useState(false);
-  const blobRef   = useRef(null);
-  const mediaRef  = useRef(null);
+  const blobRef = useRef(null);
+  const mediaRef = useRef(null);
   const chunksRef = useRef([]);
-  const timerRef  = useRef(null);
+  const timerRef = useRef(null);
 
   const start = async () => {
     try {
@@ -150,7 +152,7 @@ function useVoiceRecorder() {
     } catch { toast.error("Microphone access denied"); }
   };
 
-  const stop    = () => { if (mediaRef.current?.state !== "inactive") mediaRef.current.stop(); clearInterval(timerRef.current); setRecording(false); };
+  const stop = () => { if (mediaRef.current?.state !== "inactive") mediaRef.current.stop(); clearInterval(timerRef.current); setRecording(false); };
   const discard = () => { blobRef.current = null; setBlobReady(false); setUrl(null); setSeconds(0); };
   const getBlob = () => blobRef.current;
   return { recording, blobReady, url, seconds, start, stop, discard, getBlob };
@@ -173,7 +175,7 @@ function Avatar({ name, size = 44, color = "#00a884", bg = "#d9fdd3", Icon }) {
 function TypingDots() {
   return (
     <div style={{ display: "flex", gap: 4, padding: "8px 14px", background: "#fff", borderRadius: 18, alignSelf: "flex-start", marginBottom: 8, boxShadow: "0 1px 2px rgba(0,0,0,.1)" }}>
-      {[0,1,2].map(i => <span key={i} style={{ width: 7, height: 7, borderRadius: "50%", background: "#8696a0", display: "inline-block", animation: `bounce 1.2s ease-in-out ${i*0.2}s infinite` }} />)}
+      {[0, 1, 2].map(i => <span key={i} style={{ width: 7, height: 7, borderRadius: "50%", background: "#8696a0", display: "inline-block", animation: `bounce 1.2s ease-in-out ${i * 0.2}s infinite` }} />)}
     </div>
   );
 }
@@ -182,7 +184,7 @@ function TypingDots() {
 function MediaViewer({ src, type, name, onClose }) {
   const [pdfBlobUrl, setPdfBlobUrl] = useState(null);
   const [pdfLoading, setPdfLoading] = useState(false);
-  const [pdfError, setPdfError]     = useState(null);
+  const [pdfError, setPdfError] = useState(null);
 
   useEffect(() => {
     if (type !== "pdf") return;
@@ -247,9 +249,9 @@ function MediaViewer({ src, type, name, onClose }) {
 
 /* ── Attachment preview ──────────────────────────────────────────────────── */
 function AttachmentPreview({ url, name, fileType, fileSize, duration, dimensions, thumbnail, onMediaClick }) {
-  const kind  = detectMediaType(url, fileType);
+  const kind = detectMediaType(url, fileType);
   const label = name || url?.split("/").pop() || "file";
-  const size  = fileSize ? humanSize(fileSize) : null;
+  const size = fileSize ? humanSize(fileSize) : null;
   if (!url) return null;
 
   if (kind === "image") return (
@@ -350,7 +352,7 @@ function AttachmentPreview({ url, name, fileType, fileSize, duration, dimensions
 /* ── Message bubble ──────────────────────────────────────────────────────── */
 function MessageBubble({ msg, isOwn, showAvatar, currentUser, onDelete, onReply, onMediaClick, targetRef }) {
   const [hover, setHover] = useState(false);
-  const time      = fmtTime(msg.created_at || msg.timestamp);
+  const time = fmtTime(msg.created_at || msg.timestamp);
   const isDeleted = msg.is_deleted;
 
   const mediaArr = useMemo(() => {
@@ -432,12 +434,12 @@ const ACT_BTN = { background: "none", border: "none", cursor: "pointer", padding
 
 /* ── Chat input ──────────────────────────────────────────────────────────── */
 function ChatInput({ onSend, onTyping, disabled, replyTo, onCancelReply }) {
-  const [text, setText]     = useState("");
+  const [text, setText] = useState("");
   const [attach, setAttach] = useState(false);
-  const fileRef             = useRef(null);
-  const timerRef            = useRef(null);
-  const voice               = useVoiceRecorder();
-  const fmtSec = s => `${Math.floor(s/60).toString().padStart(2,"00")}:${(s%60).toString().padStart(2,"0")}`;
+  const fileRef = useRef(null);
+  const timerRef = useRef(null);
+  const voice = useVoiceRecorder();
+  const fmtSec = s => `${Math.floor(s / 60).toString().padStart(2, "00")}:${(s % 60).toString().padStart(2, "0")}`;
 
   const send = () => { if (text.trim()) { onSend({ content: text }); setText(""); onCancelReply?.(); } };
   const handleKey = e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } };
@@ -479,9 +481,9 @@ function ChatInput({ onSend, onTyping, disabled, replyTo, onCancelReply }) {
           {attach && (
             <div style={{ position: "absolute", bottom: "100%", left: 0, background: "#fff", borderRadius: 12, boxShadow: "0 4px 20px rgba(0,0,0,.15)", padding: 8, display: "flex", flexDirection: "column", gap: 2, minWidth: 190, zIndex: 100 }}>
               {[
-                { label: "Image / Video", accept: "image/*,video/*",             Icon: Image,    color: "#8b5cf6" },
-                { label: "Audio",         accept: "audio/*",                     Icon: Music,    color: "#f59e0b" },
-                { label: "Document",      accept: ".pdf,.doc,.docx,.xls,.xlsx",   Icon: FileIcon, color: "#3b82f6" },
+                { label: "Image / Video", accept: "image/*,video/*", Icon: Image, color: "#8b5cf6" },
+                { label: "Audio", accept: "audio/*", Icon: Music, color: "#f59e0b" },
+                { label: "Document", accept: ".pdf,.doc,.docx,.xls,.xlsx", Icon: FileIcon, color: "#3b82f6" },
               ].map(({ label, accept, Icon: Ic, color }) => (
                 <button key={label} onClick={() => { fileRef.current.accept = accept; fileRef.current.click(); setAttach(false); }}
                   style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 14px", background: "none", border: "none", cursor: "pointer", borderRadius: 8, color: "#111b21", fontSize: 14, fontWeight: 500, width: "100%" }}
@@ -553,8 +555,8 @@ function ChatInfoPanel({ chat, onClose, allMedia, onNavigateToMessage, onStartDi
             </p>
           </div>
           {(chat?.participants || []).map((p, i) => {
-            const user   = p.user || p;
-            const role   = ROLES[p.role] || ROLES.member;
+            const user = p.user || p;
+            const role = ROLES[p.role] || ROLES.member;
             const RoleIc = role.Icon;
             return (
               <div key={user.id || i}
@@ -585,44 +587,44 @@ function ChatInfoPanel({ chat, onClose, allMedia, onNavigateToMessage, onStartDi
         <div style={{ flex: 1, overflowY: "auto", padding: 10 }}>
           {allMedia.length === 0
             ? <div style={{ padding: 40, textAlign: "center", color: "#8696a0" }}>
-                <Image size={40} style={{ opacity: .25, display: "block", margin: "0 auto 10px" }} />
-                <p style={{ margin: 0 }}>No shared media</p>
-              </div>
+              <Image size={40} style={{ opacity: .25, display: "block", margin: "0 auto 10px" }} />
+              <p style={{ margin: 0 }}>No shared media</p>
+            </div>
             : <>
-                <div style={{ background: "#f0f2f5", borderRadius: 10, padding: "10px 14px", marginBottom: 10 }}>
-                  <p style={{ margin: 0, fontSize: 12, color: "#667781" }}>
-                    <strong style={{ color: "#111b21" }}>{allMedia.length}</strong> files shared
-                  </p>
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 3 }}>
-                  {allMedia.map((m, i) => {
-                    const url   = m.file_url || m.url || null;
-                    const type  = detectMediaType(url, m.file_type || "");
-                    const thumb = m.thumbnail_url || null;
-                    const msgId = m.message_id || null;
-                    return (
-                      <div key={m.id || i} onClick={() => msgId && onNavigateToMessage(msgId)} title={m.file_name || ""}
-                        style={{ aspectRatio: "1", overflow: "hidden", borderRadius: 6, cursor: msgId ? "pointer" : "default", background: "#f0f2f5", display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
-                        {type === "image"
-                          ? <img src={thumb || url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                          : type === "video"
-                            ? <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, padding: 8 }}><Film size={22} color="#8696a0" /><span style={{ fontSize: 9, color: "#8696a0" }}>video</span></div>
-                            : type === "audio"
-                              ? <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, padding: 8 }}><Mic size={22} color="#00a884" /><span style={{ fontSize: 9, color: "#00a884" }}>audio</span></div>
-                              : type === "pdf"
-                                ? <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, padding: 8 }}><FileText size={22} color="#e74c3c" /><span style={{ fontSize: 9, color: "#e74c3c" }}>pdf</span></div>
-                                : <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, padding: 8 }}><FileIcon size={22} color="#8696a0" /><span style={{ fontSize: 9, color: "#8696a0" }}>{(m.file_name || "file").split(".").pop()}</span></div>
-                        }
-                        {m.file_size && (
-                          <div style={{ position: "absolute", bottom: 3, right: 3, background: "rgba(0,0,0,.55)", color: "#fff", fontSize: 8, padding: "1px 4px", borderRadius: 3 }}>
-                            {humanSize(m.file_size)}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </>
+              <div style={{ background: "#f0f2f5", borderRadius: 10, padding: "10px 14px", marginBottom: 10 }}>
+                <p style={{ margin: 0, fontSize: 12, color: "#667781" }}>
+                  <strong style={{ color: "#111b21" }}>{allMedia.length}</strong> files shared
+                </p>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 3 }}>
+                {allMedia.map((m, i) => {
+                  const url = m.file_url || m.url || null;
+                  const type = detectMediaType(url, m.file_type || "");
+                  const thumb = m.thumbnail_url || null;
+                  const msgId = m.message_id || null;
+                  return (
+                    <div key={m.id || i} onClick={() => msgId && onNavigateToMessage(msgId)} title={m.file_name || ""}
+                      style={{ aspectRatio: "1", overflow: "hidden", borderRadius: 6, cursor: msgId ? "pointer" : "default", background: "#f0f2f5", display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
+                      {type === "image"
+                        ? <img src={thumb || url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                        : type === "video"
+                          ? <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, padding: 8 }}><Film size={22} color="#8696a0" /><span style={{ fontSize: 9, color: "#8696a0" }}>video</span></div>
+                          : type === "audio"
+                            ? <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, padding: 8 }}><Mic size={22} color="#00a884" /><span style={{ fontSize: 9, color: "#00a884" }}>audio</span></div>
+                            : type === "pdf"
+                              ? <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, padding: 8 }}><FileText size={22} color="#e74c3c" /><span style={{ fontSize: 9, color: "#e74c3c" }}>pdf</span></div>
+                              : <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, padding: 8 }}><FileIcon size={22} color="#8696a0" /><span style={{ fontSize: 9, color: "#8696a0" }}>{(m.file_name || "file").split(".").pop()}</span></div>
+                      }
+                      {m.file_size && (
+                        <div style={{ position: "absolute", bottom: 3, right: 3, background: "rgba(0,0,0,.55)", color: "#fff", fontSize: 8, padding: "1px 4px", borderRadius: 3 }}>
+                          {humanSize(m.file_size)}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </>
           }
         </div>
       )}
@@ -699,10 +701,10 @@ function SearchInChatPanel({ messages, onNavigate, onClose }) {
 
 /* ── Chat list item ──────────────────────────────────────────────────────── */
 function ChatListItem({ chat, isSelected, onClick, currentUser }) {
-  const ct       = CHAT_TYPES[chat.chat_type] || CHAT_TYPES.one_on_one;
+  const ct = CHAT_TYPES[chat.chat_type] || CHAT_TYPES.one_on_one;
   const TypeIcon = ct.Icon;
-  const last     = chat.last_message || {};
-  const time     = fmtTime(last.time || chat.updated_at);
+  const last = chat.last_message || {};
+  const time = fmtTime(last.time || chat.updated_at);
 
   const getName = () => {
     if (chat.name) return chat.name;
@@ -748,28 +750,33 @@ const GHOST_BTN = { background: "none", border: "none", cursor: "pointer", color
 /*  MAIN COMPONENT                                                            */
 /* ══════════════════════════════════════════════════════════════════════════ */
 export default function FarmerChatPage() {
-  const [chats, setChats]             = useState([]);
-  const [loading, setLoading]         = useState(true);
-  const [selected, setSelected]       = useState(null);
-  const [messages, setMessages]       = useState([]);
+  const [chats, setChats] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState(null);
+  const [messages, setMessages] = useState([]);
   const [msgsLoading, setMsgsLoading] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [typingUsers, setTypingUsers] = useState([]);
-  const [showInfo, setShowInfo]       = useState(false);
-  const [showSearch, setShowSearch]   = useState(false);
-  const [showMoreMenu, setShowMore]   = useState(false);
-  const [replyTo, setReplyTo]         = useState(null);
+  const [showInfo, setShowInfo] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
+  const [showMoreMenu, setShowMore] = useState(false);
+  const [replyTo, setReplyTo] = useState(null);
   const [mediaViewer, setMediaViewer] = useState(null);
-  const [callType, setCallType]       = useState(null);
+  const [callType, setCallType] = useState(null);
   const [chatMediaFiles, setChatMediaFiles] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
 
-  const wsRef     = useRef(null);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [isOpeningChat, setIsOpeningChat] = useState(false);
+  const chatOpenedRef = useRef(false);
+
+  const wsRef = useRef(null);
   const bottomRef = useRef(null);
-  const msgRefs   = useRef({});
+  const msgRefs = useRef({});
 
   const [mobileView, setMobileView] = useState("list");
-  const [isMobile, setIsMobile]     = useState(window.innerWidth < 768);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   useEffect(() => {
     const onResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener("resize", onResize);
@@ -778,7 +785,7 @@ export default function FarmerChatPage() {
 
   /* ── Init ── */
   useEffect(() => {
-    http.get("/profile/").then(r => setCurrentUser(r.data)).catch(() => {});
+    http.get("/profile/").then(r => setCurrentUser(r.data)).catch(() => { });
     fetchChats();
   }, []);
 
@@ -813,7 +820,7 @@ export default function FarmerChatPage() {
     } catch { setChatMediaFiles([]); }
   }, []);
 
-  const isMobileRef       = useRef(isMobile);
+  const isMobileRef = useRef(isMobile);
   const fetchChatMediaRef = useRef(fetchChatMedia);
   useEffect(() => { isMobileRef.current = isMobile; }, [isMobile]);
   useEffect(() => { fetchChatMediaRef.current = fetchChatMedia; }, [fetchChatMedia]);
@@ -828,16 +835,16 @@ export default function FarmerChatPage() {
       const r = await http.get(`/chat/${chat.id}/messages/`);
       const raw = r.data;
       let msgs = [];
-      if (Array.isArray(raw))               msgs = raw;
+      if (Array.isArray(raw)) msgs = raw;
       else if (Array.isArray(raw.messages)) msgs = raw.messages;
-      else if (Array.isArray(raw.data))     msgs = raw.data;
+      else if (Array.isArray(raw.data)) msgs = raw.data;
 
       // Filter out messages hidden for everyone (admin_only visibility) from regular users
       // These are messages deleted "for everyone" — admins still see them
       msgs = msgs.filter(m => m.visibility !== "admin_only");
 
       setMessages(msgs);
-      await http.post(`/chat/${chat.id}/mark-read/`).catch(() => {});
+      await http.post(`/chat/${chat.id}/mark-read/`).catch(() => { });
       fetchChatMedia(chat.id);
     } catch { toast.error("Failed to load messages"); }
     setMsgsLoading(false);
@@ -846,11 +853,34 @@ export default function FarmerChatPage() {
     if (isMobileRef.current) setMobileView("chat");
   }, [fetchChatMedia]);
 
+  const selectChatResponsive = selectChat;
+
+  useEffect(() => {
+    // Check if we have a chat to open from navigation state
+    if (location.state?.openChatId) {
+      const openChat = async () => {
+        try {
+          const response = await http.get(`/chat/my-chats/${location.state.openChatId}/`);
+          if (response.data) {
+            await selectChat(response.data);
+          }
+        } catch (error) {
+          console.error('Failed to open chat:', error);
+        }
+      };
+
+      openChat();
+
+      // Clear the state after opening
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state, selectChat]);
+
   /* ── WebSocket ── */
   const initWS = useCallback((chatId) => {
     wsRef.current?.close();
     const tok = localStorage.getItem("access_token");
-    const ws  = new WebSocket(`ws://127.0.0.1:8000/ws/chat/${chatId}/?token=${tok}`);
+    const ws = new WebSocket(`ws://127.0.0.1:8000/ws/chat/${chatId}/?token=${tok}`);
     ws.onmessage = e => {
       const d = JSON.parse(e.data);
       if (d.type === "chat_message") {
@@ -894,12 +924,12 @@ export default function FarmerChatPage() {
         await http.post("/chat/messages/send/", { chat_room_id: selected.id, content, message_type: "text" });
       }
       // Re-fetch messages to get fresh data including media
-      const r   = await http.get(`/chat/${selected.id}/messages/`);
+      const r = await http.get(`/chat/${selected.id}/messages/`);
       const raw = r.data;
-      let msgs  = [];
-      if (Array.isArray(raw))               msgs = raw;
+      let msgs = [];
+      if (Array.isArray(raw)) msgs = raw;
       else if (Array.isArray(raw.messages)) msgs = raw.messages;
-      else if (Array.isArray(raw.data))     msgs = raw.data;
+      else if (Array.isArray(raw.data)) msgs = raw.data;
 
       // Filter out admin_only visibility messages
       msgs = msgs.filter(m => m.visibility !== "admin_only");
@@ -938,7 +968,7 @@ export default function FarmerChatPage() {
     if (user.id === currentUser?.id) return; // can't chat with yourself
     try {
       // POST /chat/create/ with chat_type one_on_one
-      const r  = await http.post("/chat/create/", { chat_type: "one_on_one", user_id: user.id });
+      const r = await http.post("/chat/create/", { chat_type: "one_on_one", user_id: user.id });
       const nc = r.data.chat;
       setChats(p => p.find(c => c.id === nc.id) ? p : [nc, ...p]);
       await selectChat(nc);
@@ -969,6 +999,86 @@ export default function FarmerChatPage() {
     return CHAT_TYPES[chat.chat_type]?.label || "Chat";
   };
   const ct = selected ? CHAT_TYPES[selected.chat_type] || CHAT_TYPES.one_on_one : null;
+
+  const openSpecificChat = useCallback(async (chatId, userName, userId) => {
+    if (isOpeningChat || chatOpenedRef.current) return;
+
+    chatOpenedRef.current = true;
+    setIsOpeningChat(true);
+    const loadingToast = toast.loading('Opening chat...');
+
+    try {
+      // First, check if we have the chat in our current list
+      let chatToOpen = chats.find(chat => chat.id === parseInt(chatId));
+
+      if (!chatToOpen) {
+        // Fetch the chat details directly
+        const response = await http.get(`/chat/my-chats/${chatId}/`);
+        if (response.data && response.data.chat) {
+          chatToOpen = response.data.chat;
+          // Add to chats list if not present
+          setChats(prev => {
+            if (!prev.find(c => c.id === chatToOpen.id)) {
+              return [chatToOpen, ...prev];
+            }
+            return prev;
+          });
+        } else if (response.data) {
+          chatToOpen = response.data;
+          setChats(prev => {
+            if (!prev.find(c => c.id === chatToOpen.id)) {
+              return [chatToOpen, ...prev];
+            }
+            return prev;
+          });
+        }
+      }
+
+      if (chatToOpen) {
+        // Select the chat
+        await selectChat(chatToOpen);
+
+        toast.update(loadingToast, {
+          render: `Chat with ${userName || chatToOpen.name || 'user'} opened`,
+          type: 'success',
+          isLoading: false,
+          autoClose: 2000
+        });
+      } else {
+        throw new Error('Chat not found');
+      }
+    } catch (error) {
+      console.error('Failed to open chat:', error);
+      toast.update(loadingToast, {
+        render: 'Failed to open chat. Please try again.',
+        type: 'error',
+        isLoading: false,
+        autoClose: 3000
+      });
+      chatOpenedRef.current = false; // Reset on error so user can try again
+    } finally {
+      setIsOpeningChat(false);
+    }
+  }, [chats, selectChat, isOpeningChat]);
+
+  // Single effect to handle navigation state
+  useEffect(() => {
+    const state = location.state;
+    if (state?.openChatId && !chatOpenedRef.current && !isOpeningChat) {
+      // Open the chat
+      openSpecificChat(state.openChatId, state.userName, state.userId);
+
+      // Clear the state after opening - use setTimeout to ensure it runs after the effect
+      setTimeout(() => {
+        navigate(location.pathname, { replace: true, state: {} });
+      }, 100);
+    }
+
+    // Cleanup function to reset ref when component unmounts
+    return () => {
+      chatOpenedRef.current = false;
+    };
+  }, [location.state, openSpecificChat, navigate, location.pathname, isOpeningChat]);
 
   /* ══════════════════════════════════════════════════════════════════════ */
   return (
@@ -1037,17 +1147,17 @@ export default function FarmerChatPage() {
           <div style={{ flex: 1, overflowY: "auto" }}>
             {loading
               ? <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: 200 }}>
-                  <div style={{ width: 36, height: 36, border: "3px solid #e9edef", borderTop: "3px solid #00a884", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
-                </div>
+                <div style={{ width: 36, height: 36, border: "3px solid #e9edef", borderTop: "3px solid #00a884", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
+              </div>
               : filteredChats.length === 0
                 ? <div style={{ padding: 48, textAlign: "center", color: "#8696a0" }}>
-                    <MessageSquare size={48} style={{ opacity: .2, display: "block", margin: "0 auto 12px" }} />
-                    {searchQuery ? "No chats match your search" : "You have no chats yet"}
-                  </div>
+                  <MessageSquare size={48} style={{ opacity: .2, display: "block", margin: "0 auto 12px" }} />
+                  {searchQuery ? "No chats match your search" : "You have no chats yet"}
+                </div>
                 : filteredChats.map(c => (
-                    <ChatListItem key={c.id} chat={c} isSelected={selected?.id === c.id}
-                      onClick={() => selectChat(c)} currentUser={currentUser} />
-                  ))
+                  <ChatListItem key={c.id} chat={c} isSelected={selected?.id === c.id}
+                    onClick={() => selectChat(c)} currentUser={currentUser} />
+                ))
             }
           </div>
         </div>
@@ -1082,9 +1192,9 @@ export default function FarmerChatPage() {
                     {showMoreMenu && (
                       <div style={{ position: "absolute", top: "100%", right: 0, background: "#fff", borderRadius: 10, boxShadow: "0 4px 20px rgba(0,0,0,.16)", zIndex: 200, minWidth: 180, padding: 4 }}>
                         {[
-                          { label: "Chat info",  Ic: Info,   fn: () => { setShowInfo(true); setShowSearch(false); if (isMobile) setMobileView("info"); } },
-                          { label: "Members",    Ic: Users,  fn: () => { setShowInfo(true); setShowSearch(false); if (isMobile) setMobileView("info"); } },
-                          { label: "Search",     Ic: Search, fn: () => { setShowSearch(true); setShowInfo(false); if (isMobile) setMobileView("info"); } },
+                          { label: "Chat info", Ic: Info, fn: () => { setShowInfo(true); setShowSearch(false); if (isMobile) setMobileView("info"); } },
+                          { label: "Members", Ic: Users, fn: () => { setShowInfo(true); setShowSearch(false); if (isMobile) setMobileView("info"); } },
+                          { label: "Search", Ic: Search, fn: () => { setShowSearch(true); setShowInfo(false); if (isMobile) setMobileView("info"); } },
                         ].map(({ label, Ic, fn }) => (
                           <button key={label} onClick={() => { fn(); setShowMore(false); }}
                             style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "11px 16px", background: "none", border: "none", cursor: "pointer", fontSize: 14, color: "#111b21", borderRadius: 8 }}
@@ -1107,9 +1217,9 @@ export default function FarmerChatPage() {
                   </div>
                 )}
                 {messages.map((msg, idx) => {
-                  const prev       = messages[idx - 1];
+                  const prev = messages[idx - 1];
                   const sameSender = prev?.sender?.id === msg.sender?.id;
-                  const isOwn      = msg.sender?.id === currentUser?.id;
+                  const isOwn = msg.sender?.id === currentUser?.id;
                   return (
                     <MessageBubble key={msg.id || idx}
                       msg={msg} isOwn={isOwn} showAvatar={!sameSender}
@@ -1168,21 +1278,55 @@ export default function FarmerChatPage() {
             )}
           </div>
         )}
+
+        {isOpeningChat && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10000
+          }}>
+            <div style={{
+              background: '#fff',
+              borderRadius: 12,
+              padding: '24px',
+              textAlign: 'center',
+              minWidth: 300
+            }}>
+              <div style={{
+                width: 40,
+                height: 40,
+                border: '3px solid #f0f2f5',
+                borderTop: '3px solid #00a884',
+                borderRadius: '50%',
+                animation: 'spin 1s linear infinite',
+                margin: '0 auto 16px'
+              }} />
+              <p style={{ margin: 0, color: '#111b21' }}>Opening chat...</p>
+            </div>
+          </div>
+        )}
       </div>
 
       {mediaViewer && <MediaViewer {...mediaViewer} onClose={() => setMediaViewer(null)} />}
-      {callType    && <CallModal type={callType} chatName={chatName(selected)} onEnd={() => setCallType(null)} />}
+      {callType && <CallModal type={callType} chatName={chatName(selected)} onEnd={() => setCallType(null)} />}
     </div>
   );
 }
 
 /* ── Call modal ── */
 function CallModal({ type, chatName, onEnd }) {
-  const [sec, setSec]         = useState(0);
-  const [muted, setMuted]     = useState(false);
-  const [camOff, setCamOff]   = useState(false);
+  const [sec, setSec] = useState(0);
+  const [muted, setMuted] = useState(false);
+  const [camOff, setCamOff] = useState(false);
   const [permErr, setPermErr] = useState(null);
-  const streamRef   = useRef(null);
+  const streamRef = useRef(null);
   const localVidRef = useRef(null);
 
   useEffect(() => {
@@ -1194,7 +1338,7 @@ function CallModal({ type, chatName, onEnd }) {
     return () => { active = false; clearInterval(timer); streamRef.current?.getTracks().forEach(t => t.stop()); };
   }, [type]);
 
-  const fmtSec = s => `${Math.floor(s/60).toString().padStart(2,"0")}:${(s%60).toString().padStart(2,"0")}`;
+  const fmtSec = s => `${Math.floor(s / 60).toString().padStart(2, "0")}:${(s % 60).toString().padStart(2, "0")}`;
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "linear-gradient(135deg,#005c4b,#00a884)", zIndex: 9000, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", color: "#fff" }}>
@@ -1244,7 +1388,7 @@ const HDR_BTN = { background: "none", border: "none", cursor: "pointer", color: 
 function Settings({ size = 16 }) {
   return (
     <svg width={size} height={size} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-      <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+      <circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
     </svg>
   );
 }

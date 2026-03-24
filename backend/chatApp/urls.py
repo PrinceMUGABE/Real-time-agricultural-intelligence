@@ -8,6 +8,7 @@ urlpatterns = [
     path('my-chats/', views.get_my_chats, name='get_my_chats'),
     path('create/', views.create_chat_room, name='create_chat_room'),
     path('<int:room_id>/', views.get_chat_room, name='get_chat_room'),
+    path('my-chats/<int:room_id>/', views.user_get_chat_by_id, name='user_get_chat_by_id'),
     
     # Messages
     path('messages/send/', views.send_message, name='send_message'),
@@ -41,4 +42,6 @@ urlpatterns = [
     path('admin/chats/<int:room_id>/participants/update/', views.admin_update_participant_role, name='admin_update_participant_role'),
     path('admin/chats/<int:room_id>/participants/block/', views.admin_block_participant, name='admin_block_participant'),
     path('admin/chats/<int:room_id>/delete/', views.admin_delete_chat, name='admin_delete_chat'),
+    path('admin/chats/<int:room_id>/', views.admin_get_chat_by_id, name='admin_get_chat_by_id'),
+
 ]

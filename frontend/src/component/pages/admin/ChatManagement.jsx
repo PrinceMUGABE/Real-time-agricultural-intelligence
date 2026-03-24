@@ -25,6 +25,8 @@ import {
     Play, Pause, Square, FileText, AlertTriangle,
     CornerUpLeft, FileSpreadsheet,
 } from "lucide-react";
+import { useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 function Info({ size = 16 }) {
     return (
@@ -1293,17 +1295,21 @@ export default function AdminChatManagement() {
 
     const [mobileView, setMobileView] = useState("list");
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+    const location = useLocation();
+    const navigate = useNavigate();
+    const [isOpeningChat, setIsOpeningChat] = useState(false);
+    const chatOpenedRef = useRef(false);
+
+
+
     useEffect(() => {
         const onResize = () => setIsMobile(window.innerWidth < 768);
         window.addEventListener("resize", onResize);
         return () => window.removeEventListener("resize", onResize);
     }, []);
 
-    useEffect(() => {
-        http.get("/profile/").then(r => setCurrentUser(r.data)).catch(() => { });
-        fetchChats();
-    }, []);
-    useEffect(() => { fetchChats(); }, [filters, page]);
+
 
     const fetchChats = useCallback(async () => {
         setLoading(true);
@@ -1319,6 +1325,12 @@ export default function AdminChatManagement() {
         } catch { toast.error("Failed to load chats"); }
         setLoading(false);
     }, [filters, page]);
+
+    useEffect(() => {
+        http.get("/profile/").then(r => setCurrentUser(r.data)).catch(() => { });
+        fetchChats();
+    }, []);
+    useEffect(() => { fetchChats(); }, [filters, page]);
 
     const fetchChatMedia = useCallback(async (chatId) => {
         if (!chatId) return;
@@ -1367,6 +1379,28 @@ export default function AdminChatManagement() {
     }, [fetchChatMedia]);
 
     const selectChatResponsive = selectChat;
+
+    useEffect(() => {
+        // Check if we have a chat to open from navigation state
+        if (location.state?.openChatId) {
+            const openChat = async () => {
+                try {
+                    const response = await http.get(`/chat/admin/chats/${location.state.openChatId}/`);
+                    if (response.data) {
+                        await selectChat(response.data);
+                    }
+                } catch (error) {
+                    console.error('Failed to open chat:', error);
+                }
+            };
+
+            openChat();
+
+            // Clear the state after opening
+            window.history.replaceState({}, document.title);
+        }
+    }, [location.state, selectChat]);
+
 
     const initWS = useCallback((chatId) => {
         wsRef.current?.close();
@@ -1501,6 +1535,86 @@ export default function AdminChatManagement() {
         return CHAT_TYPES[chat.chat_type]?.label || "Chat";
     };
     const ct = selected ? CHAT_TYPES[selected.chat_type] || CHAT_TYPES.one_on_one : null;
+
+    const openSpecificChat = useCallback(async (chatId, userName, userId) => {
+        if (isOpeningChat || chatOpenedRef.current) return;
+
+        chatOpenedRef.current = true;
+        setIsOpeningChat(true);
+        const loadingToast = toast.loading('Opening chat...');
+
+        try {
+            // First, check if we have the chat in our current list
+            let chatToOpen = chats.find(chat => chat.id === parseInt(chatId));
+
+            if (!chatToOpen) {
+                // Fetch the chat details directly
+                const response = await http.get(`/chat/admin/chats/${chatId}/`);
+                if (response.data && response.data.chat) {
+                    chatToOpen = response.data.chat;
+                    // Add to chats list if not present
+                    setChats(prev => {
+                        if (!prev.find(c => c.id === chatToOpen.id)) {
+                            return [chatToOpen, ...prev];
+                        }
+                        return prev;
+                    });
+                } else if (response.data) {
+                    chatToOpen = response.data;
+                    setChats(prev => {
+                        if (!prev.find(c => c.id === chatToOpen.id)) {
+                            return [chatToOpen, ...prev];
+                        }
+                        return prev;
+                    });
+                }
+            }
+
+            if (chatToOpen) {
+                // Select the chat
+                await selectChat(chatToOpen);
+
+                toast.update(loadingToast, {
+                    render: `Chat with ${userName || chatToOpen.name || 'user'} opened`,
+                    type: 'success',
+                    isLoading: false,
+                    autoClose: 2000
+                });
+            } else {
+                throw new Error('Chat not found');
+            }
+        } catch (error) {
+            console.error('Failed to open chat:', error);
+            toast.update(loadingToast, {
+                render: 'Failed to open chat. Please try again.',
+                type: 'error',
+                isLoading: false,
+                autoClose: 3000
+            });
+            chatOpenedRef.current = false; // Reset on error so user can try again
+        } finally {
+            setIsOpeningChat(false);
+        }
+    }, [chats, selectChat, isOpeningChat]);
+
+    // Single effect to handle navigation state
+    useEffect(() => {
+        const state = location.state;
+        if (state?.openChatId && !chatOpenedRef.current && !isOpeningChat) {
+            // Open the chat
+            openSpecificChat(state.openChatId, state.userName, state.userId);
+
+            // Clear the state after opening - use setTimeout to ensure it runs after the effect
+            setTimeout(() => {
+                navigate(location.pathname, { replace: true, state: {} });
+            }, 100);
+        }
+
+        // Cleanup function to reset ref when component unmounts
+        return () => {
+            chatOpenedRef.current = false;
+        };
+    }, [location.state, openSpecificChat, navigate, location.pathname, isOpeningChat]);
 
     /* ══════════════════════════════════════════════════════════════════════ */
     return (
@@ -1739,6 +1853,40 @@ export default function AdminChatManagement() {
                             <SearchInChatPanel messages={messages} onNavigate={navigateToMessage}
                                 onClose={() => { setShowSearch(false); if (isMobile) setMobileView("chat"); }} />
                         )}
+                    </div>
+                )}
+
+                {isOpeningChat && (
+                    <div style={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        background: 'rgba(0,0,0,0.5)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        zIndex: 10000
+                    }}>
+                        <div style={{
+                            background: '#fff',
+                            borderRadius: 12,
+                            padding: '24px',
+                            textAlign: 'center',
+                            minWidth: 300
+                        }}>
+                            <div style={{
+                                width: 40,
+                                height: 40,
+                                border: '3px solid #f0f2f5',
+                                borderTop: '3px solid #00a884',
+                                borderRadius: '50%',
+                                animation: 'spin 1s linear infinite',
+                                margin: '0 auto 16px'
+                            }} />
+                            <p style={{ margin: 0, color: '#111b21' }}>Opening chat...</p>
+                        </div>
                     </div>
                 )}
             </div>

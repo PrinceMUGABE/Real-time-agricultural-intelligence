@@ -507,12 +507,12 @@ function MatchDetailsModal({ match, onClose, onContactFarmer, onContactBuyer }) 
                     <User size={24} />
                   </div>
                   <div>
-                    <span className="party-badge" style={roleColors.farmer}>{t('farmer')}</span>
+                    <span className="party-badge" style={roleColors.farmer}>{t('me')}</span>
                     <h4>{match.farmer?.full_name}</h4>
                   </div>
                 </div>
                 <div className="party-card-body">
-                  <div className="party-info-item">
+                  {/* <div className="party-info-item">
                     <Phone size={14} />
                     <span>{match.farmer?.phone_number}</span>
                   </div>
@@ -521,7 +521,7 @@ function MatchDetailsModal({ match, onClose, onContactFarmer, onContactBuyer }) 
                       <Mail size={14} />
                       <span>{match.farmer.email}</span>
                     </div>
-                  )}
+                  )} */}
                   <div className="party-info-item">
                     <MapPin size={14} />
                     <span>{match.stock?.location}</span>
@@ -540,7 +540,7 @@ function MatchDetailsModal({ match, onClose, onContactFarmer, onContactBuyer }) 
                   </div>
                 </div>
                 <div className="party-card-body">
-                  <div className="party-info-item">
+                  {/* <div className="party-info-item">
                     <Phone size={14} />
                     <span>{match.buyer?.phone_number}</span>
                   </div>
@@ -549,7 +549,7 @@ function MatchDetailsModal({ match, onClose, onContactFarmer, onContactBuyer }) 
                       <Mail size={14} />
                       <span>{match.buyer.email}</span>
                     </div>
-                  )}
+                  )} */}
                   <div className="party-info-item">
                     <MapPin size={14} />
                     <span>{match.crop_standard?.preferred_location || t('anywhere')}</span>
@@ -694,13 +694,6 @@ function MatchDetailsModal({ match, onClose, onContactFarmer, onContactBuyer }) 
           <div className="match-actions">
             <button
               className="action-btn primary"
-              onClick={() => onContactFarmer(match.farmer?.id, match.farmer?.full_name)}
-            >
-              <MessageCircle size={16} />
-              {t('contact_farmer')}
-            </button>
-            <button
-              className="action-btn primary"
               onClick={() => onContactBuyer(match.buyer?.id, match.buyer?.full_name)}
             >
               <MessageCircle size={16} />
@@ -804,7 +797,7 @@ function DistributionChart({ title, data, icon: Icon, type = 'product' }) {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export default function AdminMarketMatching() {
+export default function FarmerMarketMatching() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [contacting, setContacting] = useState(false);
@@ -906,7 +899,7 @@ export default function AdminMarketMatching() {
         ...(fetchFilters.search && { search: fetchFilters.search })
       });
 
-      const response = await apiClient.get(`/market-matching/admin/matches/?${params}`, {
+      const response = await apiClient.get(`/market-matching/farmer/matches/?${params}`, {
         signal: abortControllerRef.current.signal
       });
 
@@ -1013,7 +1006,7 @@ export default function AdminMarketMatching() {
 
     try {
       // First, check if a chat already exists with this user
-      const response = await apiClient.get(`/chat/admin/chats/`, {
+      const response = await apiClient.get(`/chat/my-chats/`, {
         params: {
           search: userName,
           chat_type: "one_on_one",
@@ -1045,7 +1038,7 @@ export default function AdminMarketMatching() {
 
       // If no existing chat, create a new one
       if (!chatId) {
-        const createResponse = await apiClient.post("/chat/admin/chats/create/", {
+        const createResponse = await apiClient.post("/chat/create/", {
           chat_type: "one_on_one",
           user_id: userId,
           name: `Chat with ${userName}`
@@ -1073,7 +1066,7 @@ export default function AdminMarketMatching() {
 
       // Navigate to chat management with the chat ID
       setTimeout(() => {
-        navigate('/admin/chats', {
+        navigate('/farmer/chats', {
           state: {
             openChatId: chatId,
             userId: userId,

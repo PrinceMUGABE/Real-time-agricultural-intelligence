@@ -1648,7 +1648,7 @@ export default function FarmerLayout() {
   // Nav items
   const navItems = [
     { icon: <LayoutDashboard size={17} />, label: t("nav.dashboard", { defaultValue: "Dashboard" }), path: "/farmer", end: true },
-    { icon: <Handshake size={17} />, label: t("nav.marketMatches", { defaultValue: "Market Matches" }), path: "/admin/market-matches" },
+    { icon: <Handshake size={17} />, label: t("nav.marketMatches", { defaultValue: "Market Matches" }), path: "/farmer/market-matches" },
     { icon: <Wheat size={17} />, label: t("nav.farmers", { defaultValue: "Farmers" }), path: "/farmer/farmers" },
     { icon: <Users size={17} />, label: t("nav.users", { defaultValue: "Users" }), path: "/farmer/users" },
     { icon: <BarChart2 size={17} />, label: t("nav.transactions", { defaultValue: "Transactions" }), path: "/farmer/transactions" },

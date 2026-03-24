@@ -110,9 +110,29 @@ function useChatUnread() {
     }
   }, []);
 
+  const fetchMarketMatching = useCallback(async () => {
+    const token = localStorage.getItem("access_token");
+    if (!token) return;
+    try {
+      const res = await fetch(`${BASE_URL}/market-matching/admin/matches/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      // Process market matching unread counts
+    } catch (err) {
+      console.error("Failed to fetch market matching unread counts:", err);
+    }
+
+  }, []);
+
   useEffect(() => {
     fetchUnread();
-    const interval = setInterval(fetchUnread, 30000);
+    fetchMarketMatching();
+    const interval = setInterval(() => {
+      fetchUnread();
+      fetchMarketMatching();
+    }, 30000);
     return () => clearInterval(interval);
   }, [fetchUnread]);
 
