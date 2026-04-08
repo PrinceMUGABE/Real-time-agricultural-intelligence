@@ -446,6 +446,7 @@ function MatchCard({ match, onViewDetails }) {
 
 function MatchDetailsModal({ match, onClose, onContactFarmer, onContactBuyer }) {
     const { t } = useTranslation();
+    const navigate = useNavigate();
 
     if (!match) return null;
 
@@ -468,6 +469,41 @@ function MatchDetailsModal({ match, onClose, onContactFarmer, onContactBuyer }) 
     };
 
     const scoreConfig = getScoreConfig(match.match_score);
+
+    const handleGenerateContract = () => {
+        const stockData = {
+            id: match.stock?.id,
+            product_name: match.stock?.product_name || match.crop_standard?.crop_name,
+            price_per_kg: match.farmer_price || match.stock?.price_per_kg,
+            farmer: match.farmer?.id,
+            farmer_id: match.farmer?.id,
+            farmer_name: match.farmer?.full_name,
+            farmer_phone: match.farmer?.phone_number,
+            farmer_email: match.farmer?.email,
+            buyer_preferred_location: match.crop_standard?.preferred_location || "",
+            buyer_preferred_delivery_location: match.buyer?.location || "",
+            buyer_location: match.buyer?.location || "",
+            available_quantity: match.available_quantity,
+            requested_quantity: match.requested_quantity,
+            quality_grade: match.stock?.quality_grade,
+            description: match.stock?.description,
+            buyer_price: match.buyer_price,
+            match_score: match.match_score,
+            buyer_name: match.buyer?.full_name,
+            buyer: match.buyer?.id,
+            buyer_id: match.buyer?.id
+        };
+
+        navigate('/buyer/contracts', {
+            state: {
+                stockData,
+                fromMatching: true,
+                matchScore: match.match_score,
+                openCreateModal: true,
+            }
+        });
+        onClose();
+    };
 
     return (
         <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
@@ -691,7 +727,14 @@ function MatchDetailsModal({ match, onClose, onContactFarmer, onContactBuyer }) 
                             {t('contact_farmer')}
                         </button>
 
-                        <button className="action-btn secondary">
+                        <button
+                            className="action-btn contract"
+                            onClick={handleGenerateContract}
+                            style={{
+                                background: 'linear-gradient(135deg, #1e3c1e 0%, #2d5a2d 100%)',
+                                color: 'white'
+                            }}
+                        >
                             <FileText size={16} />
                             {t('generate_contract')}
                         </button>

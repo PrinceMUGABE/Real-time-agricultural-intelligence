@@ -180,6 +180,8 @@ def get_farmer_matches(request):
         end = start + page_size
         paginated_matches = matches[start:end]
         
+        print(f"\n retrieved market matching are:\n{paginated_matches}\n")
+        
         # Get summary statistics (using all matches, not just paginated)
         summary = get_match_summary(matches)
         

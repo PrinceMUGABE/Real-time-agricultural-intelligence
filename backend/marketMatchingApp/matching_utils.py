@@ -228,7 +228,9 @@ def find_matches_for_farmer(farmer, filters=None):
                             'full_name': standard.created_by.full_name,
                             'phone_number': standard.created_by.phone_number,
                             'email': standard.created_by.email,
-                            'role': standard.created_by.role
+                            'role': standard.created_by.role,
+                            'location': getattr(standard.created_by, 'location', None)
+
                         },
                         'match_score': score,
                         'match_details': details,

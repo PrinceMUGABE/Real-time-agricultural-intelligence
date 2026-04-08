@@ -1097,6 +1097,7 @@ function StandardFormModal({ isOpen, onClose, onSubmit, buyers, editingStandard,
                                 className={`form-control ${errors.crop_name ? 'error' : ''}`}
                                 value={form.crop_name}
                                 onChange={(e) => handleChange('crop_name', e.target.value)}
+                                
                                 placeholder={t('enter_crop_name')}
                             />
                             {errors.crop_name && <div className="error-message">{errors.crop_name}</div>}

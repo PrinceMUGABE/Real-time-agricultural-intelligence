@@ -817,7 +817,7 @@ export default function LandingPage() {
               {apiError && <div className="alert error"><AlertCircle size={15}/> {apiError}</div>}
               <form onSubmit={handleCreateAccount}>
                 <div className="role-grid">
-                  {[{k:"farmer",l:t("auth.createAccount.farmer")},{k:"buyer",l:t("auth.createAccount.buyer")},{k:"admin",l:t("auth.createAccount.admin")}].map(r=>(
+                  {[{k:"farmer",l:t("auth.createAccount.farmer")},{k:"buyer",l:t("auth.createAccount.buyer")}].map(r=>(
                     <button key={r.k} type="button" className={`role-btn${accountType===r.k?" active":""}`} onClick={()=>setAccountType(r.k)}>{r.l}</button>
                   ))}
                 </div>

@@ -48,7 +48,7 @@ def _user_payload(user, tokens=None):
 
 def _admin_required(request):
     """Returns a 403 Response if user is not admin, else None."""
-    if request.user.role != 'admin':
+    if request.user.role != 'admin' and request.user.role != 'buyer' and request.user.role != 'farmer':
         return Response({"error": t("admin_required", request.lang)}, status=403)
     return None
 
