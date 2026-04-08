@@ -14,6 +14,7 @@ urlpatterns = [
     path('chat/', include('chatApp.urls')),
     path('contract/', include('contractApp.urls')),
     path('market-matching/', include('marketMatchingApp.urls')),
+    path('reports/', include('reportApp.urls')),
 ]
 
 if settings.DEBUG:

@@ -794,7 +794,6 @@ export default function AdminLayout() {
   const navItems = [
     { icon: <LayoutDashboard size={17} />, label: t("nav.dashboard",     { defaultValue: "Dashboard" }),     path: "/admin",               end: true },
     { icon: <Handshake       size={17} />, label: t("nav.marketMatches",  { defaultValue: "Market Matches" }), path: "/admin/market-matches"       },
-    { icon: <Wheat           size={17} />, label: t("nav.farmers",        { defaultValue: "Farmers" }),        path: "/admin/farmers"              },
     { icon: <Users           size={17} />, label: t("nav.users",          { defaultValue: "Users" }),          path: "/admin/users"                },
     { icon: <BarChart2       size={17} />, label: t("nav.transactions",   { defaultValue: "Transactions" }),   path: "/admin/transactions"         },
     { icon: <ClipboardList   size={17} />, label: t("nav.dataEntry",      { defaultValue: "Data Entry" }),     path: "/admin/crops"                },

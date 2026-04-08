@@ -8,7 +8,7 @@ import LandingPage from './component/common/LandindPage';
 import AdminLayout from './component/pages/admin/Layout';
 import AdminMarketMatches from './component/pages/admin/MarketMatch';
 import ManageCrops from './component/pages/admin/ManageCrops';
-import FarmersPage from './component/pages/admin/ManageFarmers';
+import AdminDashboard from './component/pages/admin/AdminDashboard';
 import UserManagement from './component/pages/admin/UserManagement';
 import ContractsManagement from './component/pages/admin/ManageContracts';
 import AdminStandardsManagement from './component/pages/admin/ManageStandards';
@@ -54,9 +54,10 @@ function App() {
 
           
           <Route path="/admin" element={<AdminLayout />}>
-            <Route index element={<AdminMarketMatches />} />
+            <Route index element={<AdminDashboard />} />
+            <Route path="market-matches" element={<AdminMarketMatches />} />
             <Route path="crops" element={<ManageCrops />} />
-            <Route path="farmers" element={<FarmersPage />} />
+            <Route path="dashboard" element={<AdminDashboard />} />
             <Route path="users" element={<UserManagement />} />
             <Route path="contracts" element={<ContractsManagement />} />
             <Route path="standards" element={<AdminStandardsManagement />} />
