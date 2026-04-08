@@ -1328,3 +1328,95 @@ def get_farmer_unresolved_alerts(request):
     except Exception as exc:
         return _log_and_respond(exc, 'get_farmer_unresolved_alerts', lang,
                                 status.HTTP_500_INTERNAL_SERVER_ERROR, 'server_error')
+        
+        
+        
+        
+        
+@api_view(['GET'])
+def list_available_stocks(request):
+    """
+    Public endpoint — no login required.
+    Returns active stocks that still have quantity available,
+    with optional filtering by product, location, and quality grade.
+    """
+    lang = get_language(request)
+
+    try:
+        stocks = Stock.objects.filter(
+            is_active=True,
+            quantity__gt=0,
+        ).select_related('farmer')
+
+        # ── Optional filters ─────────────────────────────────────────────
+        product = request.query_params.get('product')
+        if product:
+            stocks = stocks.filter(product_name__icontains=product)
+
+        location = request.query_params.get('location')
+        if location:
+            stocks = stocks.filter(location__icontains=location)
+
+        quality = request.query_params.get('quality')
+        if quality:
+            stocks = stocks.filter(quality_grade=quality)
+
+        min_price = request.query_params.get('min_price')
+        if min_price:
+            try:
+                stocks = stocks.filter(price_per_kg__gte=Decimal(min_price))
+            except (InvalidOperation, ValueError):
+                pass
+
+        max_price = request.query_params.get('max_price')
+        if max_price:
+            try:
+                stocks = stocks.filter(price_per_kg__lte=Decimal(max_price))
+            except (InvalidOperation, ValueError):
+                pass
+
+        # ── Pagination ───────────────────────────────────────────────────
+        page      = int(request.query_params.get('page', 1))
+        page_size = min(int(request.query_params.get('page_size', 20)), 100)
+        start     = (page - 1) * page_size
+        end       = start + page_size
+
+        total       = stocks.count()
+        stocks_page = stocks.order_by('-created_at')[start:end]
+
+        # ── Lean serializer (no movements, no internal details) ──────────
+        data = [
+            {
+                'id':            s.id,
+                'product_name':  s.product_name,
+                'quantity':      float(s.quantity),
+                'unit':          s.unit,
+                'quality_grade': s.quality_grade,
+                'quality_label': dict(Stock.QUALITY_GRADES).get(s.quality_grade, s.quality_grade),
+                'price_per_kg':  float(s.price_per_kg) if s.price_per_kg else None,
+                'currency':      'RWF',
+                'location':      s.location,
+                'description':   s.description or '',
+                'farmer': {
+                    'id':       s.farmer.id,
+                    'name':     s.farmer.full_name,
+                    'location': s.farmer.location,
+                },
+                'listed_at': s.created_at.isoformat(),
+            }
+            for s in stocks_page
+        ]
+
+        return Response({
+            'total':       total,
+            'page':        page,
+            'page_size':   page_size,
+            'total_pages': (total + page_size - 1) // page_size,
+            'stocks':      data,
+        })
+
+    except Exception as exc:
+        return _log_and_respond(
+            exc, 'list_available_stocks', lang,
+            status.HTTP_500_INTERNAL_SERVER_ERROR, 'server_error',
+        )

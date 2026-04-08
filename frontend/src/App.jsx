@@ -30,7 +30,7 @@ import BuyerLayout from './component/pages/buyer/Layout';
 import BuyerDashboard from './component/pages/buyer/Dashboard';
 import BuyerStandardsManagement from './component/pages/buyer/MyStandards';
 import BuyerChatPage from './component/pages/buyer/BuyerChatManagement';
-import BuyManageCrops from './component/pages/buyer/ShowStocks';
+import BuyerShowStocks from './component/pages/buyer/ShowStocks';
 import BuyerMarketMatching from './component/pages/buyer/MarketMarching';
 import BuyerContracts from './component/pages/buyer/ManageContracts';
 
@@ -77,7 +77,7 @@ function App() {
             <Route path="dashboard" element={<BuyerDashboard />} />
             <Route path="standards" element={<BuyerStandardsManagement />} />
             <Route path="chats" element={<BuyerChatPage />} />
-            <Route path="stocks" element={<BuyManageCrops />} />
+            <Route path="stocks" element={<BuyerShowStocks />} />
             <Route path="market-matches" element={<BuyerMarketMatching />} />
             <Route path="contracts" element={<BuyerContracts />} />
 

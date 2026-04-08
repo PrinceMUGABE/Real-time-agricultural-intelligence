@@ -166,12 +166,136 @@ function Pagination({ currentPage, totalPages, onPageChange, pageSize, onPageSiz
   );
 }
 
-// Contract Details Modal
-function ContractDetailsModal({ isOpen, onClose, contract, onUpdate, onDelete, onRefresh }) {
+
+function PaymentConfirmationModal({ isOpen, onClose, payment, onConfirm, onReject }) {
+  const { t } = useTranslation();
+  const [loading, setLoading] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState("");
+
+  if (!isOpen || !payment) return null;
+
+  const handleConfirm = async () => {
+    setLoading(true);
+    try {
+      await onConfirm(payment.id);
+      onClose();
+    } catch (error) {
+      console.error("Error confirming payment:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleReject = async () => {
+    if (!rejectionReason.trim()) {
+      toast.error(t('please_enter_rejection_reason'));
+      return;
+    }
+    setLoading(true);
+    try {
+      await onReject(payment.id, rejectionReason);
+      onClose();
+    } catch (error) {
+      console.error("Error rejecting payment:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="modal-card payment-confirm-modal" style={{ maxWidth: '450px' }}>
+        <div className="modal-head">
+          <h2>{payment.status === 'pending' ? t('confirm_payment') : t('review_payment')}</h2>
+          <button className="modal-close" onClick={onClose}>
+            <X size={18} />
+          </button>
+        </div>
+        <div className="modal-body">
+          <div className="payment-summary">
+            <div className="summary-item">
+              <span className="summary-label">{t('amount')}:</span>
+              <span className="summary-value">{payment.amount?.toLocaleString()} RWF</span>
+            </div>
+            <div className="summary-item">
+              <span className="summary-label">{t('payment_method')}:</span>
+              <span className="summary-value">{t(payment.payment_method)}</span>
+            </div>
+            <div className="summary-item">
+              <span className="summary-label">{t('reference_number')}:</span>
+              <span className="summary-value">{payment.reference_number || t('not_provided')}</span>
+            </div>
+            <div className="summary-item">
+              <span className="summary-label">{t('paid_at')}:</span>
+              <span className="summary-value">{new Date(payment.paid_at).toLocaleString()}</span>
+            </div>
+            {payment.notes && (
+              <div className="summary-item">
+                <span className="summary-label">{t('notes')}:</span>
+                <span className="summary-value">{payment.notes}</span>
+              </div>
+            )}
+          </div>
+
+          {payment.status === 'pending' && (
+            <>
+              <div className="form-group">
+                <label>{t('rejection_reason')} ({t('optional')})</label>
+                <textarea
+                  className="form-input"
+                  rows="2"
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  placeholder={t('enter_rejection_reason_if_applicable')}
+                />
+              </div>
+
+              <div className="payment-confirm-actions">
+                <button className="btn-confirm-payment" onClick={handleConfirm} disabled={loading}>
+                  {loading && <Loader2 size={16} className="spin-icon" />}
+                  <CheckCircle size={16} />
+                  {t('confirm_payment')}
+                </button>
+                <button className="btn-reject-payment" onClick={handleReject} disabled={loading}>
+                  {loading && <Loader2 size={16} className="spin-icon" />}
+                  <XCircle size={16} />
+                  {t('reject_payment')}
+                </button>
+              </div>
+            </>
+          )}
+
+          {payment.status === 'confirmed' && (
+            <div className="payment-already-confirmed">
+              <CheckCircle size={48} color="#2e7d32" />
+              <p>{t('payment_already_confirmed')}</p>
+              {payment.confirmed_by_detail && (
+                <small>{t('confirmed_by')}: {payment.confirmed_by_detail.full_name} on {new Date(payment.confirmed_at).toLocaleString()}</small>
+              )}
+            </div>
+          )}
+
+          {payment.status === 'rejected' && (
+            <div className="payment-already-rejected">
+              <XCircle size={48} color="#c62828" />
+              <p>{t('payment_already_rejected')}</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Updated ContractDetailsModal with payment actions
+function ContractDetailsModal({ isOpen, onClose, contract, onUpdate, onDelete, onRefresh, apiClient }) {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState("details");
   const [loading, setLoading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [selectedPayment, setSelectedPayment] = useState(null);
+  const [showPaymentConfirmModal, setShowPaymentConfirmModal] = useState(false);
+  const [updatingPayment, setUpdatingPayment] = useState(false);
 
   if (!isOpen || !contract) return null;
 
@@ -179,6 +303,49 @@ function ContractDetailsModal({ isOpen, onClose, contract, onUpdate, onDelete, o
   const needsAdminConfirmation = contract.both_parties_accepted && !contract.admin_confirmed;
   const canBeCompleted = contract.status === "accepted" && contract.is_fully_paid && contract.delivery_status === "completed";
   const canBeFailed = contract.status !== "completed" && contract.status !== "failed";
+
+  // Payment confirmation handler
+  const handleConfirmPayment = async (paymentId) => {
+    setUpdatingPayment(true);
+    try {
+      const response = await apiClient.post(`/contract/payments/${paymentId}/confirm/`);
+      if (response.data.success) {
+        toast.success(t('payment_confirmed_successfully'));
+        onRefresh(); // Refresh the parent component
+        // Refresh the contract data
+        const updatedContract = await apiClient.get(`/contract/${contract.id}/`);
+        Object.assign(contract, updatedContract.data);
+      }
+    } catch (error) {
+      console.error("Error confirming payment:", error);
+      toast.error(error.response?.data?.error || t('failed_to_confirm_payment'));
+    } finally {
+      setUpdatingPayment(false);
+      setShowPaymentConfirmModal(false);
+      setSelectedPayment(null);
+    }
+  };
+
+  // Payment rejection handler
+  const handleRejectPayment = async (paymentId, reason) => {
+    setUpdatingPayment(true);
+    try {
+      const response = await apiClient.post(`/contract/payments/${paymentId}/reject/`, { reason });
+      if (response.data.success) {
+        toast.success(t('payment_rejected_successfully'));
+        onRefresh();
+        const updatedContract = await apiClient.get(`/contract/${contract.id}/`);
+        Object.assign(contract, updatedContract.data);
+      }
+    } catch (error) {
+      console.error("Error rejecting payment:", error);
+      toast.error(error.response?.data?.error || t('failed_to_reject_payment'));
+    } finally {
+      setUpdatingPayment(false);
+      setShowPaymentConfirmModal(false);
+      setSelectedPayment(null);
+    }
+  };
 
   const handleDelete = async () => {
     setLoading(true);
@@ -225,7 +392,7 @@ function ContractDetailsModal({ isOpen, onClose, contract, onUpdate, onDelete, o
   const handleFailContract = async () => {
     const reason = prompt(t('enter_failure_reason'));
     if (!reason) return;
-    
+
     setLoading(true);
     try {
       await onUpdate(contract.id, 'fail', reason);
@@ -239,352 +406,413 @@ function ContractDetailsModal({ isOpen, onClose, contract, onUpdate, onDelete, o
   };
 
   return (
-    <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="modal-card admin-contract-modal">
-        <div className="modal-head">
-          <div>
-            <h2>{t('contract_details')} #{contract.id}</h2>
-            <p className="modal-subtitle">{contract.crop_name}</p>
+    <>
+      <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
+        <div className="modal-card admin-contract-modal">
+          <div className="modal-head">
+            <div>
+              <h2>{t('contract_details')} #{contract.id}</h2>
+              <p className="modal-subtitle">{contract.crop_name}</p>
+            </div>
+            <button className="modal-close" onClick={onClose}>
+              <X size={18} />
+            </button>
           </div>
-          <button className="modal-close" onClick={onClose}>
-            <X size={18} />
-          </button>
-        </div>
 
-        <div className="modal-tabs">
-          <button className={`tab-btn ${activeTab === "details" ? "active" : ""}`} onClick={() => setActiveTab("details")}>
-            <FileText size={16} /> {t('details')}
-          </button>
-          <button className={`tab-btn ${activeTab === "payments" ? "active" : ""}`} onClick={() => setActiveTab("payments")}>
-            <DollarSign size={16} /> {t('payments')} ({contract.payment_records?.length || 0})
-          </button>
-          <button className={`tab-btn ${activeTab === "activities" ? "active" : ""}`} onClick={() => setActiveTab("activities")}>
-            <Activity size={16} /> {t('activities')} ({contract.activities?.length || 0})
-          </button>
-          <button className={`tab-btn ${activeTab === "statistics" ? "active" : ""}`} onClick={() => setActiveTab("statistics")}>
-            <BarChart3 size={16} /> {t('statistics')}
-          </button>
-        </div>
+          <div className="modal-tabs">
+            <button className={`tab-btn ${activeTab === "details" ? "active" : ""}`} onClick={() => setActiveTab("details")}>
+              <FileText size={16} /> {t('details')}
+            </button>
+            <button className={`tab-btn ${activeTab === "payments" ? "active" : ""}`} onClick={() => setActiveTab("payments")}>
+              <DollarSign size={16} /> {t('payments')} ({contract.payment_records?.length || 0})
+            </button>
+            <button className={`tab-btn ${activeTab === "activities" ? "active" : ""}`} onClick={() => setActiveTab("activities")}>
+              <Activity size={16} /> {t('activities')} ({contract.activities?.length || 0})
+            </button>
+            <button className={`tab-btn ${activeTab === "statistics" ? "active" : ""}`} onClick={() => setActiveTab("statistics")}>
+              <BarChart3 size={16} /> {t('statistics')}
+            </button>
+          </div>
 
-        <div className="modal-body">
-          {activeTab === "details" && (
-            <div className="contract-details">
-              {/* Parties Section */}
-              <div className="details-section">
-                <h3><Users size={16} /> {t('parties')}</h3>
-                <div className="parties-grid">
-                  <div className="party-card">
-                    <div className="party-header">
-                      <div className="party-avatar" style={roleColors.farmer}>
-                        <User size={20} />
-                      </div>
-                      <div>
-                        <div className="party-role">{t('farmer')}</div>
-                        <div className="party-name">{contract.farmer_detail?.full_name}</div>
-                      </div>
-                    </div>
-                    <div className="party-info">
-                      <Phone size={14} /> {contract.farmer_detail?.phone_number}
-                      <Mail size={14} /> {contract.farmer_detail?.email}
-                      <MapPin size={14} /> {contract.farmer_detail?.location}
-                    </div>
-                    <div className="party-status">
-                      {t('status')}: <StatusBadge status={contract.farmer_status} />
-                    </div>
-                  </div>
-                  <div className="party-card">
-                    <div className="party-header">
-                      <div className="party-avatar" style={roleColors.buyer}>
-                        <User size={20} />
-                      </div>
-                      <div>
-                        <div className="party-role">{t('buyer')}</div>
-                        <div className="party-name">{contract.buyer_detail?.full_name}</div>
-                      </div>
-                    </div>
-                    <div className="party-info">
-                      <Phone size={14} /> {contract.buyer_detail?.phone_number}
-                      <Mail size={14} /> {contract.buyer_detail?.email}
-                      <MapPin size={14} /> {contract.buyer_detail?.location}
-                    </div>
-                    <div className="party-status">
-                      {t('status')}: <StatusBadge status={contract.buyer_status} />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Contract Details */}
-              <div className="details-section">
-                <h3><Package size={16} /> {t('contract_details')}</h3>
-                <div className="details-grid">
-                  <div className="detail-item">
-                    <span className="detail-label">{t('crop')}:</span>
-                    <span className="detail-value">{contract.crop_name}</span>
-                  </div>
-                  <div className="detail-item">
-                    <span className="detail-label">{t('quantity')}:</span>
-                    <span className="detail-value">{contract.quantity_kg?.toLocaleString()} kg</span>
-                  </div>
-                  <div className="detail-item">
-                    <span className="detail-label">{t('price_per_kg')}:</span>
-                    <span className="detail-value">{contract.price_per_kg?.toLocaleString()} RWF</span>
-                  </div>
-                  <div className="detail-item">
-                    <span className="detail-label">{t('total_amount')}:</span>
-                    <span className="detail-value highlight">{contract.total_amount?.toLocaleString()} RWF</span>
-                  </div>
-                  <div className="detail-item">
-                    <span className="detail-label">{t('payment_option')}:</span>
-                    <span className="detail-value">{contract.payment_option === "full" ? t('full_payment') : t('partial_payment')}</span>
-                  </div>
-                  <div className="detail-item">
-                    <span className="detail-label">{t('delivery_location')}:</span>
-                    <span className="detail-value">{contract.delivery_location || t('not_specified')}</span>
-                  </div>
-                  <div className="detail-item">
-                    <span className="detail-label">{t('delivery_status')}:</span>
-                    <span className="detail-value"><StatusBadge status={contract.delivery_status} type="delivery" /></span>
-                  </div>
-                  <div className="detail-item">
-                    <span className="detail-label">{t('payment_status')}:</span>
-                    <span className="detail-value"><StatusBadge status={contract.payment_status} type="payment" /></span>
-                  </div>
-                  <div className="detail-item">
-                    <span className="detail-label">{t('admin_confirmed')}:</span>
-                    <span className="detail-value">
-                      {contract.admin_confirmed ? 
-                        <CheckCircle size={14} color="#2e7d32" /> : 
-                        <Clock size={14} color="#b76e0a" />
-                      }
-                    </span>
-                  </div>
-                  <div className="detail-item">
-                    <span className="detail-label">{t('created_at')}:</span>
-                    <span className="detail-value">{new Date(contract.created_at).toLocaleDateString()}</span>
-                  </div>
-                </div>
-              </div>
-
-              {contract.deliver_detail && (
+          <div className="modal-body">
+            {activeTab === "details" && (
+              <div className="contract-details">
+                {/* Parties Section */}
                 <div className="details-section">
-                  <h3><Truck size={16} /> {t('deliver_person')}</h3>
-                  <div className="deliver-card">
-                    <div className="deliver-info">
-                      <User size={16} />
-                      <span>{contract.deliver_detail.full_name}</span>
-                      <Phone size={16} />
-                      <span>{contract.deliver_detail.phone_number}</span>
+                  <h3><Users size={16} /> {t('parties')}</h3>
+                  <div className="parties-grid">
+                    <div className="party-card">
+                      <div className="party-header">
+                        <div className="party-avatar" style={roleColors.farmer}>
+                          <User size={20} />
+                        </div>
+                        <div>
+                          <div className="party-role">{t('farmer')}</div>
+                          <div className="party-name">{contract.farmer_detail?.full_name}</div>
+                        </div>
+                      </div>
+                      <div className="party-info">
+                        <Phone size={14} /> {contract.farmer_detail?.phone_number}
+                        <Mail size={14} /> {contract.farmer_detail?.email}
+                        <MapPin size={14} /> {contract.farmer_detail?.location}
+                      </div>
+                      <div className="party-status">
+                        {t('status')}: <StatusBadge status={contract.farmer_status} />
+                      </div>
+                    </div>
+                    <div className="party-card">
+                      <div className="party-header">
+                        <div className="party-avatar" style={roleColors.buyer}>
+                          <User size={20} />
+                        </div>
+                        <div>
+                          <div className="party-role">{t('buyer')}</div>
+                          <div className="party-name">{contract.buyer_detail?.full_name}</div>
+                        </div>
+                      </div>
+                      <div className="party-info">
+                        <Phone size={14} /> {contract.buyer_detail?.phone_number}
+                        <Mail size={14} /> {contract.buyer_detail?.email}
+                        <MapPin size={14} /> {contract.buyer_detail?.location}
+                      </div>
+                      <div className="party-status">
+                        {t('status')}: <StatusBadge status={contract.buyer_status} />
+                      </div>
                     </div>
                   </div>
                 </div>
-              )}
 
-              {/* Admin Actions */}
-              <div className="details-actions">
-                {needsAdminConfirmation && (
-                  <button className="action-btn confirm" onClick={handleConfirmContract} disabled={loading}>
-                    <ShieldCheck size={16} />
-                    {t('confirm_contract')}
-                  </button>
+                {/* Contract Details */}
+                <div className="details-section">
+                  <h3><Package size={16} /> {t('contract_details')}</h3>
+                  <div className="details-grid">
+                    <div className="detail-item">
+                      <span className="detail-label">{t('crop')}:</span>
+                      <span className="detail-value">{contract.crop_name}</span>
+                    </div>
+                    <div className="detail-item">
+                      <span className="detail-label">{t('quantity')}:</span>
+                      <span className="detail-value">{contract.quantity_kg?.toLocaleString()} kg</span>
+                    </div>
+                    <div className="detail-item">
+                      <span className="detail-label">{t('price_per_kg')}:</span>
+                      <span className="detail-value">{contract.price_per_kg?.toLocaleString()} RWF</span>
+                    </div>
+                    <div className="detail-item">
+                      <span className="detail-label">{t('total_amount')}:</span>
+                      <span className="detail-value highlight">{contract.total_amount?.toLocaleString()} RWF</span>
+                    </div>
+                    <div className="detail-item">
+                      <span className="detail-label">{t('payment_option')}:</span>
+                      <span className="detail-value">{contract.payment_option === "full" ? t('full_payment') : t('partial_payment')}</span>
+                    </div>
+                    <div className="detail-item">
+                      <span className="detail-label">{t('delivery_location')}:</span>
+                      <span className="detail-value">{contract.delivery_location || t('not_specified')}</span>
+                    </div>
+                    <div className="detail-item">
+                      <span className="detail-label">{t('delivery_status')}:</span>
+                      <span className="detail-value"><StatusBadge status={contract.delivery_status} type="delivery" /></span>
+                    </div>
+                    <div className="detail-item">
+                      <span className="detail-label">{t('payment_status')}:</span>
+                      <span className="detail-value"><StatusBadge status={contract.payment_status} type="payment" /></span>
+                    </div>
+                    <div className="detail-item">
+                      <span className="detail-label">{t('admin_confirmed')}:</span>
+                      <span className="detail-value">
+                        {contract.admin_confirmed ?
+                          <CheckCircle size={14} color="#2e7d32" /> :
+                          <Clock size={14} color="#b76e0a" />
+                        }
+                      </span>
+                    </div>
+                    <div className="detail-item">
+                      <span className="detail-label">{t('created_at')}:</span>
+                      <span className="detail-value">{new Date(contract.created_at).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {contract.deliver_detail && (
+                  <div className="details-section">
+                    <h3><Truck size={16} /> {t('deliver_person')}</h3>
+                    <div className="deliver-card">
+                      <div className="deliver-info">
+                        <User size={16} />
+                        <span>{contract.deliver_detail.full_name}</span>
+                        <Phone size={16} />
+                        <span>{contract.deliver_detail.phone_number}</span>
+                      </div>
+                    </div>
+                  </div>
                 )}
-                {canBeCompleted && (
-                  <button className="action-btn complete" onClick={handleCompleteContract} disabled={loading}>
-                    <CheckCircle size={16} />
-                    {t('mark_completed')}
-                  </button>
-                )}
-                {canBeFailed && (
-                  <button className="action-btn fail" onClick={handleFailContract} disabled={loading}>
-                    <AlertCircle size={16} />
-                    {t('mark_failed')}
-                  </button>
-                )}
-                {canDelete && (
-                  <button className="action-btn delete" onClick={() => setShowDeleteConfirm(true)} disabled={loading}>
-                    <Trash2 size={16} />
-                    {t('delete_contract')}
-                  </button>
+
+                {/* Admin Actions */}
+                <div className="details-actions">
+                  {needsAdminConfirmation && (
+                    <button className="action-btn confirm" onClick={handleConfirmContract} disabled={loading}>
+                      <ShieldCheck size={16} />
+                      {t('confirm_contract')}
+                    </button>
+                  )}
+                  {canBeCompleted && (
+                    <button className="action-btn complete" onClick={handleCompleteContract} disabled={loading}>
+                      <CheckCircle size={16} />
+                      {t('mark_completed')}
+                    </button>
+                  )}
+                  {canBeFailed && (
+                    <button className="action-btn fail" onClick={handleFailContract} disabled={loading}>
+                      <AlertCircle size={16} />
+                      {t('mark_failed')}
+                    </button>
+                  )}
+                  {canDelete && (
+                    <button className="action-btn delete" onClick={() => setShowDeleteConfirm(true)} disabled={loading}>
+                      <Trash2 size={16} />
+                      {t('delete_contract')}
+                    </button>
+                  )}
+                </div>
+
+                {/* Delete Confirmation */}
+                {showDeleteConfirm && (
+                  <div className="delete-confirm">
+                    <p><AlertCircle size={16} /> {t('confirm_delete_contract')}</p>
+                    <div className="delete-confirm-actions">
+                      <button className="btn-cancel" onClick={() => setShowDeleteConfirm(false)}>{t('cancel')}</button>
+                      <button className="btn-confirm-delete" onClick={handleDelete}>{t('delete')}</button>
+                    </div>
+                  </div>
                 )}
               </div>
+            )}
 
-              {/* Delete Confirmation */}
-              {showDeleteConfirm && (
-                <div className="delete-confirm">
-                  <p><AlertCircle size={16} /> {t('confirm_delete_contract')}</p>
-                  <div className="delete-confirm-actions">
-                    <button className="btn-cancel" onClick={() => setShowDeleteConfirm(false)}>{t('cancel')}</button>
-                    <button className="btn-confirm-delete" onClick={handleDelete}>{t('delete')}</button>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {activeTab === "payments" && (
-            <div className="payments-list">
-              {contract.payment_records && contract.payment_records.length > 0 ? (
-                contract.payment_records.map(payment => (
-                  <div key={payment.id} className="payment-item">
-                    <div className="payment-header">
-                      <span className="payment-amount">{payment.amount?.toLocaleString()} RWF</span>
-                      <StatusBadge status={payment.status} type="payment" />
-                    </div>
-                    <div className="payment-details">
-                      <div className="payment-method">
-                        <Smartphone size={14} />
-                        <span>{t(payment.payment_method)}</span>
+            {activeTab === "payments" && (
+              <div className="payments-list">
+                {contract.payment_records && contract.payment_records.length > 0 ? (
+                  contract.payment_records.map(payment => (
+                    <div key={payment.id} className={`payment-item ${payment.status === 'pending' ? 'pending-payment' : ''}`}>
+                      <div className="payment-header">
+                        <span className="payment-amount">{payment.amount?.toLocaleString()} RWF</span>
+                        <StatusBadge status={payment.status} type="payment" />
                       </div>
-                      {payment.reference_number && (
-                        <div className="payment-ref">
-                          <FileText size={14} />
-                          <span>{payment.reference_number}</span>
+                      <div className="payment-details">
+                        <div className="payment-method">
+                          <Smartphone size={14} />
+                          <span>{t(payment.payment_method)}</span>
                         </div>
-                      )}
-                      <div className="payment-date">
-                        <Calendar size={14} />
-                        <span>{new Date(payment.paid_at).toLocaleDateString()}</span>
+                        {payment.reference_number && (
+                          <div className="payment-ref">
+                            <FileText size={14} />
+                            <span>{payment.reference_number}</span>
+                          </div>
+                        )}
+                        <div className="payment-date">
+                          <Calendar size={14} />
+                          <span>{new Date(payment.paid_at).toLocaleDateString()}</span>
+                        </div>
                       </div>
-                    </div>
-                    {payment.recorded_by_detail && (
-                      <div className="payment-recorded-by">
-                        <User size={12} />
-                        <span>{t('recorded_by')}: {payment.recorded_by_detail.full_name}</span>
-                      </div>
-                    )}
-                    {payment.notes && <div className="payment-notes">{payment.notes}</div>}
-                  </div>
-                ))
-              ) : (
-                <div className="empty-state">
-                  <DollarSign size={32} />
-                  <p>{t('no_payments_recorded')}</p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {activeTab === "activities" && (
-            <div className="activities-list">
-              {contract.activities && contract.activities.length > 0 ? (
-                contract.activities.map(activity => (
-                  <div key={activity.id} className="activity-item">
-                    <div className="activity-icon">
-                      {activity.activity_type === 'created' && <FileText size={16} color="#2e7d32" />}
-                      {activity.activity_type === 'accepted' && <CheckCircle size={16} color="#2e7d32" />}
-                      {activity.activity_type === 'rejected' && <XCircle size={16} color="#c62828" />}
-                      {activity.activity_type === 'confirmed' && <ShieldCheck size={16} color="#1565c0" />}
-                      {activity.activity_type === 'payment_added' && <DollarSign size={16} color="#b76e0a" />}
-                      {activity.activity_type === 'payment_confirmed' && <CheckCircle size={16} color="#2e7d32" />}
-                      {activity.activity_type === 'payment_rejected' && <XCircle size={16} color="#c62828" />}
-                      {activity.activity_type === 'delivery_started' && <Truck size={16} color="#1565c0" />}
-                      {activity.activity_type === 'delivery_completed' && <CheckCircle size={16} color="#2e7d32" />}
-                      {activity.activity_type === 'completed' && <Award size={16} color="#1565c0" />}
-                      {activity.activity_type === 'failed' && <AlertCircle size={16} color="#c62828" />}
-                      {(activity.activity_type === 'updated' || !activity.activity_type) && <Edit2 size={16} color="#b76e0a" />}
-                    </div>
-                    <div className="activity-content">
-                      <div className="activity-header">
-                        <span className="activity-type">{t(activity.activity_type)}</span>
-                        <span className="activity-time">{new Date(activity.created_at).toLocaleString()}</span>
-                      </div>
-                      {activity.performed_by_detail && (
-                        <div className="activity-performed-by">
+                      {payment.recorded_by_detail && (
+                        <div className="payment-recorded-by">
                           <User size={12} />
-                          <span>{activity.performed_by_detail.full_name}</span>
-                          <span className="activity-role">({activity.performed_by_detail.role})</span>
+                          <span>{t('recorded_by')}: {payment.recorded_by_detail.full_name}</span>
                         </div>
                       )}
-                      {activity.details && Object.keys(activity.details).length > 0 && (
-                        <div className="activity-details">
-                          <pre>{JSON.stringify(activity.details, null, 2)}</pre>
+                      {payment.notes && <div className="payment-notes">{payment.notes}</div>}
+
+                      {/* Payment Action Buttons for Admin */}
+                      {payment.status === 'pending' && (
+                        <div className="payment-actions">
+                          <button
+                            className="action-btn confirm-payment"
+                            onClick={() => {
+                              setSelectedPayment(payment);
+                              setShowPaymentConfirmModal(true);
+                            }}
+                            disabled={updatingPayment}
+                          >
+                            <CheckCircle size={14} />
+                            {t('confirm')}
+                          </button>
+                          <button
+                            className="action-btn reject-payment"
+                            onClick={() => {
+                              setSelectedPayment(payment);
+                              setShowPaymentConfirmModal(true);
+                            }}
+                            disabled={updatingPayment}
+                          >
+                            <XCircle size={14} />
+                            {t('reject')}
+                          </button>
+                        </div>
+                      )}
+
+                      {payment.status === 'confirmed' && payment.confirmed_by_detail && (
+                        <div className="payment-confirmation-info">
+                          <ShieldCheck size={12} color="#2e7d32" />
+                          <span>{t('confirmed_by')}: {payment.confirmed_by_detail.full_name}</span>
+                          <span className="confirmation-date">
+                            {payment.confirmed_at && new Date(payment.confirmed_at).toLocaleString()}
+                          </span>
+                        </div>
+                      )}
+
+                      {payment.status === 'rejected' && (
+                        <div className="payment-rejection-info">
+                          <AlertCircle size={12} color="#c62828" />
+                          <span>{t('payment_rejected')}</span>
                         </div>
                       )}
                     </div>
+                  ))
+                ) : (
+                  <div className="empty-state">
+                    <DollarSign size={32} />
+                    <p>{t('no_payments_recorded')}</p>
                   </div>
-                ))
-              ) : (
-                <div className="empty-state">
-                  <Activity size={32} />
-                  <p>{t('no_activities_recorded')}</p>
-                </div>
-              )}
-            </div>
-          )}
+                )}
+              </div>
+            )}
 
-          {activeTab === "statistics" && (
-            <div className="statistics-section">
-              <div className="stats-grid-mini">
-                <div className="stat-mini-card">
-                  <div className="stat-mini-icon" style={{ backgroundColor: "#e8f5e9", color: "#2e7d32" }}>
-                    <Percent size={20} />
-                  </div>
-                  <div>
-                    <div className="stat-mini-value">
-                      {((contract.amount_paid / contract.total_amount) * 100).toFixed(1)}%
+            {activeTab === "activities" && (
+              <div className="activities-list">
+                {contract.activities && contract.activities.length > 0 ? (
+                  contract.activities.map(activity => (
+                    <div key={activity.id} className="activity-item">
+                      <div className="activity-icon">
+                        {activity.activity_type === 'created' && <FileText size={16} color="#2e7d32" />}
+                        {activity.activity_type === 'accepted' && <CheckCircle size={16} color="#2e7d32" />}
+                        {activity.activity_type === 'rejected' && <XCircle size={16} color="#c62828" />}
+                        {activity.activity_type === 'confirmed' && <ShieldCheck size={16} color="#1565c0" />}
+                        {activity.activity_type === 'payment_added' && <DollarSign size={16} color="#b76e0a" />}
+                        {activity.activity_type === 'payment_confirmed' && <CheckCircle size={16} color="#2e7d32" />}
+                        {activity.activity_type === 'payment_rejected' && <XCircle size={16} color="#c62828" />}
+                        {activity.activity_type === 'delivery_started' && <Truck size={16} color="#1565c0" />}
+                        {activity.activity_type === 'delivery_completed' && <CheckCircle size={16} color="#2e7d32" />}
+                        {activity.activity_type === 'completed' && <Award size={16} color="#1565c0" />}
+                        {activity.activity_type === 'failed' && <AlertCircle size={16} color="#c62828" />}
+                        {(activity.activity_type === 'updated' || !activity.activity_type) && <Edit2 size={16} color="#b76e0a" />}
+                      </div>
+                      <div className="activity-content">
+                        <div className="activity-header">
+                          <span className="activity-type">{t(activity.activity_type)}</span>
+                          <span className="activity-time">{new Date(activity.created_at).toLocaleString()}</span>
+                        </div>
+                        {activity.performed_by_detail && (
+                          <div className="activity-performed-by">
+                            <User size={12} />
+                            <span>{activity.performed_by_detail.full_name}</span>
+                            <span className="activity-role">({activity.performed_by_detail.role})</span>
+                          </div>
+                        )}
+                        {activity.details && Object.keys(activity.details).length > 0 && (
+                          <div className="activity-details">
+                            <pre>{JSON.stringify(activity.details, null, 2)}</pre>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <div className="stat-mini-label">{t('payment_progress')}</div>
+                  ))
+                ) : (
+                  <div className="empty-state">
+                    <Activity size={32} />
+                    <p>{t('no_activities_recorded')}</p>
                   </div>
-                </div>
-                <div className="stat-mini-card">
-                  <div className="stat-mini-icon" style={{ backgroundColor: "#e3f2fd", color: "#1565c0" }}>
-                    <Wallet size={20} />
-                  </div>
-                  <div>
-                    <div className="stat-mini-value">{contract.balance_due?.toLocaleString()} RWF</div>
-                    <div className="stat-mini-label">{t('remaining_balance')}</div>
-                  </div>
-                </div>
-                <div className="stat-mini-card">
-                  <div className="stat-mini-icon" style={{ backgroundColor: "#fff8e1", color: "#b76e0a" }}>
-                    <Activity size={20} />
-                  </div>
-                  <div>
-                    <div className="stat-mini-value">{contract.payment_records?.length || 0}</div>
-                    <div className="stat-mini-label">{t('total_payments')}</div>
-                  </div>
-                </div>
-                <div className="stat-mini-card">
-                  <div className="stat-mini-icon" style={{ backgroundColor: "#f3e8ff", color: "#7e22ce" }}>
-                    <Clock size={20} />
-                  </div>
-                  <div>
-                    <div className="stat-mini-value">{contract.activities?.length || 0}</div>
-                    <div className="stat-mini-label">{t('total_activities')}</div>
-                  </div>
-                </div>
+                )}
               </div>
+            )}
 
-              <div className="progress-section">
-                <div className="progress-label">
-                  <span>{t('payment_progress')}</span>
-                  <span>{contract.amount_paid?.toLocaleString()} RWF / {contract.total_amount?.toLocaleString()} RWF</span>
+            {activeTab === "statistics" && (
+              <div className="statistics-section">
+                <div className="stats-grid-mini">
+                  <div className="stat-mini-card">
+                    <div className="stat-mini-icon" style={{ backgroundColor: "#e8f5e9", color: "#2e7d32" }}>
+                      <Percent size={20} />
+                    </div>
+                    <div>
+                      <div className="stat-mini-value">
+                        {((contract.amount_paid / contract.total_amount) * 100).toFixed(1)}%
+                      </div>
+                      <div className="stat-mini-label">{t('payment_progress')}</div>
+                    </div>
+                  </div>
+                  <div className="stat-mini-card">
+                    <div className="stat-mini-icon" style={{ backgroundColor: "#e3f2fd", color: "#1565c0" }}>
+                      <Wallet size={20} />
+                    </div>
+                    <div>
+                      <div className="stat-mini-value">{contract.balance_due?.toLocaleString()} RWF</div>
+                      <div className="stat-mini-label">{t('remaining_balance')}</div>
+                    </div>
+                  </div>
+                  <div className="stat-mini-card">
+                    <div className="stat-mini-icon" style={{ backgroundColor: "#fff8e1", color: "#b76e0a" }}>
+                      <Activity size={20} />
+                    </div>
+                    <div>
+                      <div className="stat-mini-value">{contract.payment_records?.length || 0}</div>
+                      <div className="stat-mini-label">{t('total_payments')}</div>
+                    </div>
+                  </div>
+                  <div className="stat-mini-card">
+                    <div className="stat-mini-icon" style={{ backgroundColor: "#f3e8ff", color: "#7e22ce" }}>
+                      <Clock size={20} />
+                    </div>
+                    <div>
+                      <div className="stat-mini-value">{contract.activities?.length || 0}</div>
+                      <div className="stat-mini-label">{t('total_activities')}</div>
+                    </div>
+                  </div>
                 </div>
-                <div className="progress-bar-container">
-                  <div className="progress-bar" style={{ width: `${(contract.amount_paid / contract.total_amount) * 100}%` }} />
+
+                <div className="progress-section">
+                  <div className="progress-label">
+                    <span>{t('payment_progress')}</span>
+                    <span>{contract.amount_paid?.toLocaleString()} RWF / {contract.total_amount?.toLocaleString()} RWF</span>
+                  </div>
+                  <div className="progress-bar-container">
+                    <div className="progress-bar" style={{ width: `${(contract.amount_paid / contract.total_amount) * 100}%` }} />
+                  </div>
                 </div>
+
+                {contract.payment_due_date && (
+                  <div className="due-date-info">
+                    <AlertCircle size={16} />
+                    <span>{t('payment_due_date')}: {new Date(contract.payment_due_date).toLocaleDateString()}</span>
+                  </div>
+                )}
+
+                {contract.delivery_date && (
+                  <div className="delivery-date-info">
+                    <Truck size={16} />
+                    <span>{t('delivery_date')}: {new Date(contract.delivery_date).toLocaleDateString()}</span>
+                  </div>
+                )}
               </div>
-
-              {contract.payment_due_date && (
-                <div className="due-date-info">
-                  <AlertCircle size={16} />
-                  <span>{t('payment_due_date')}: {new Date(contract.payment_due_date).toLocaleDateString()}</span>
-                </div>
-              )}
-
-              {contract.delivery_date && (
-                <div className="delivery-date-info">
-                  <Truck size={16} />
-                  <span>{t('delivery_date')}: {new Date(contract.delivery_date).toLocaleDateString()}</span>
-                </div>
-              )}
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
-    </div>
+
+      {/* Payment Confirmation Modal */}
+      <PaymentConfirmationModal
+        isOpen={showPaymentConfirmModal}
+        onClose={() => {
+          setShowPaymentConfirmModal(false);
+          setSelectedPayment(null);
+        }}
+        payment={selectedPayment}
+        onConfirm={handleConfirmPayment}
+        onReject={handleRejectPayment}
+      />
+    </>
   );
 }
+
+// Main Admin Contracts Component
 
 // Main Admin Contracts Component
 export default function ContractsManagement() {
@@ -593,6 +821,7 @@ export default function ContractsManagement() {
 
   // State
   const [contracts, setContracts] = useState([]);
+  const [filteredContracts, setFilteredContracts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
@@ -611,11 +840,92 @@ export default function ContractsManagement() {
     search: ""
   });
 
+  // Helper function to determine display status for admin view
+  const getDisplayStatus = useCallback((contract) => {
+    // If contract is fully paid AND delivery is completed, it should be completed
+    if (contract.is_fully_paid && contract.delivery_status === "completed") {
+      return "completed";
+    }
+    // If both parties accepted but admin not confirmed yet
+    if (contract.both_parties_accepted && !contract.admin_confirmed) {
+      return "awaiting_confirmation";
+    }
+    // If admin confirmed and contract is accepted
+    if (contract.admin_confirmed && contract.status === "accepted") {
+      return "active";
+    }
+    return contract.status;
+  }, []);
+
+  // Filter contracts based on selected filters
+  const filterContracts = useCallback((contractsList) => {
+    let filtered = [...contractsList];
+
+    // Apply status filter using display_status
+    if (filters.status) {
+      filtered = filtered.filter(contract => {
+        const displayStatus = getDisplayStatus(contract);
+        
+        // Map filter values to display_status values
+        if (filters.status === "accepted") {
+          return displayStatus === "active" || displayStatus === "awaiting_confirmation";
+        }
+        if (filters.status === "pending") {
+          return displayStatus === "pending";
+        }
+        if (filters.status === "completed") {
+          return displayStatus === "completed";
+        }
+        if (filters.status === "failed") {
+          return displayStatus === "failed";
+        }
+        return displayStatus === filters.status;
+      });
+    }
+
+    // Apply payment status filter
+    if (filters.payment_status) {
+      filtered = filtered.filter(contract => 
+        contract.payment_status === filters.payment_status
+      );
+    }
+
+    // Apply delivery status filter
+    if (filters.delivery_status) {
+      filtered = filtered.filter(contract => 
+        contract.delivery_status === filters.delivery_status
+      );
+    }
+
+    // Apply admin confirmation filter
+    if (filters.admin_confirmed) {
+      const isConfirmed = filters.admin_confirmed === "true";
+      filtered = filtered.filter(contract => 
+        contract.admin_confirmed === isConfirmed
+      );
+    }
+
+    // Apply search filter
+    if (filters.search) {
+      const searchLower = filters.search.toLowerCase();
+      filtered = filtered.filter(contract =>
+        contract.crop_name?.toLowerCase().includes(searchLower) ||
+        contract.farmer_detail?.full_name?.toLowerCase().includes(searchLower) ||
+        contract.buyer_detail?.full_name?.toLowerCase().includes(searchLower) ||
+        contract.id?.toString().includes(searchLower)
+      );
+    }
+
+    return filtered;
+  }, [filters, getDisplayStatus]);
+
+  
+
   // Statistics
   const [stats, setStats] = useState({
     total: 0,
     pending: 0,
-    accepted: 0,
+    active: 0,
     completed: 0,
     failed: 0,
     awaiting_admin: 0
@@ -656,28 +966,48 @@ export default function ContractsManagement() {
   const fetchContracts = useCallback(async () => {
     setLoading(true);
     try {
+      // Fetch all contracts without status filter (handle filtering on frontend)
       const params = new URLSearchParams({
         page: currentPage,
         page_size: pageSize,
-        ...(filters.status && { status: filters.status }),
-        ...(filters.payment_status && { payment_status: filters.payment_status }),
-        ...(filters.delivery_status && { delivery_status: filters.delivery_status }),
-        ...(filters.admin_confirmed && { admin_confirmed: filters.admin_confirmed }),
         ...(filters.search && { search: filters.search })
       });
 
       const response = await apiClient.get(`/contract/contracts/?${params}`);
       console.log("Contracts response:", response.data);
-      setContracts(response.data.contracts || []);
+
+      const contractsData = response.data.contracts || [];
+
+      // Add display_status to each contract
+      const contractsWithDisplayStatus = contractsData.map(c => ({
+        ...c,
+        display_status: getDisplayStatus(c)
+      }));
+
+      setContracts(contractsWithDisplayStatus);
+      
+      // Apply filters
+      const filtered = filterContracts(contractsWithDisplayStatus);
+      setFilteredContracts(filtered);
+      
       setTotalItems(response.data.total || 0);
       setTotalPages(response.data.total_pages || 1);
-      setStats(response.data.stats || {
-        total: 0,
-        pending: 0,
-        accepted: 0,
-        completed: 0,
-        failed: 0,
-        awaiting_admin: 0
+
+      // Calculate stats using display_status
+      const total = contractsWithDisplayStatus.length;
+      const pending = contractsWithDisplayStatus.filter(c => c.display_status === "pending").length;
+      const active = contractsWithDisplayStatus.filter(c => c.display_status === "active").length;
+      const completed = contractsWithDisplayStatus.filter(c => c.display_status === "completed").length;
+      const failed = contractsWithDisplayStatus.filter(c => c.display_status === "failed").length;
+      const awaiting_admin = contractsWithDisplayStatus.filter(c => c.display_status === "awaiting_confirmation").length;
+
+      setStats({
+        total,
+        pending,
+        active,
+        completed,
+        failed,
+        awaiting_admin
       });
     } catch (error) {
       console.error("Error fetching contracts:", error);
@@ -685,7 +1015,15 @@ export default function ContractsManagement() {
     } finally {
       setLoading(false);
     }
-  }, [apiClient, currentPage, pageSize, filters]);
+  }, [apiClient, currentPage, pageSize, filters, getDisplayStatus, filterContracts]);
+
+  // Re-filter when filters change
+  useEffect(() => {
+    if (contracts.length > 0) {
+      const filtered = filterContracts(contracts);
+      setFilteredContracts(filtered);
+    }
+  }, [filters, contracts, filterContracts]);
 
   useEffect(() => {
     fetchContracts();
@@ -741,20 +1079,24 @@ export default function ContractsManagement() {
 
   // Export to CSV
   const exportToCSV = () => {
+    const exportData = filters.status || filters.payment_status || filters.delivery_status || filters.admin_confirmed || filters.search
+      ? filteredContracts
+      : contracts;
+      
     const headers = ['ID', 'Crop', 'Farmer', 'Buyer', 'Quantity', 'Total Amount', 'Status', 'Payment Status', 'Delivery Status', 'Admin Confirmed'];
-    const rows = contracts.map(c => [
+    const rows = exportData.map(c => [
       c.id,
       c.crop_name,
       c.farmer_detail?.full_name,
       c.buyer_detail?.full_name,
       c.quantity_kg,
       c.total_amount,
-      c.status,
+      c.display_status,
       c.payment_status,
       c.delivery_status,
       c.admin_confirmed ? 'Yes' : 'No'
     ]);
-    
+
     const csvContent = [headers, ...rows].map(row => row.join(',')).join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -766,13 +1108,16 @@ export default function ContractsManagement() {
     toast.success(t('export_successful'));
   };
 
+  // Get display status icon
+  const getAdminStatusIcon = (contract) => {
+    if (contract.admin_confirmed) return <CheckCircle size={16} color="#2e7d32" />;
+    if (contract.both_parties_accepted) return <AlertCircle size={16} color="#b76e0a" />;
+    return <Clock size={16} color="#94a3b8" />;
+  };
+
   // Render contract row for table view
   const renderContractRow = (contract) => {
-    const getAdminStatusIcon = () => {
-      if (contract.admin_confirmed) return <CheckCircle size={16} color="#2e7d32" />;
-      if (contract.both_parties_accepted) return <AlertCircle size={16} color="#b76e0a" />;
-      return <Clock size={16} color="#94a3b8" />;
-    };
+    const displayStatus = getDisplayStatus(contract);
 
     return (
       <tr key={contract.id} className="contract-row">
@@ -782,10 +1127,10 @@ export default function ContractsManagement() {
         <td className="contract-buyer">{contract.buyer_detail?.full_name}</td>
         <td className="contract-quantity">{contract.quantity_kg?.toLocaleString()} kg</td>
         <td className="contract-amount">{contract.total_amount?.toLocaleString()} RWF</td>
-        <td className="contract-status"><StatusBadge status={contract.status} /></td>
+        <td className="contract-status"><StatusBadge status={displayStatus} /></td>
         <td className="contract-payment"><StatusBadge status={contract.payment_status} type="payment" /></td>
         <td className="contract-delivery"><StatusBadge status={contract.delivery_status} type="delivery" /></td>
-        <td className="contract-admin">{getAdminStatusIcon()}</td>
+        <td className="contract-admin">{getAdminStatusIcon(contract)}</td>
         <td className="contract-actions">
           <button
             className="action-btn view"
@@ -804,11 +1149,7 @@ export default function ContractsManagement() {
 
   // Render contract card for grid view
   const renderContractCard = (contract) => {
-    const getAdminStatusIcon = () => {
-      if (contract.admin_confirmed) return <CheckCircle size={14} color="#2e7d32" />;
-      if (contract.both_parties_accepted) return <AlertCircle size={14} color="#b76e0a" />;
-      return <Clock size={14} color="#94a3b8" />;
-    };
+    const displayStatus = getDisplayStatus(contract);
 
     return (
       <div key={contract.id} className="contract-card-grid" onClick={() => {
@@ -820,7 +1161,7 @@ export default function ContractsManagement() {
             <h4>{contract.crop_name}</h4>
             <span className="card-id">#{contract.id}</span>
           </div>
-          <StatusBadge status={contract.status} />
+          <StatusBadge status={displayStatus} />
         </div>
         <div className="card-details">
           <div className="card-detail">
@@ -844,12 +1185,20 @@ export default function ContractsManagement() {
           <div className="card-statuses">
             <StatusBadge status={contract.payment_status} type="payment" />
             <StatusBadge status={contract.delivery_status} type="delivery" />
-            {getAdminStatusIcon()}
+            {getAdminStatusIcon(contract)}
           </div>
         </div>
       </div>
     );
   };
+
+  // Determine which contracts to display
+  const displayContracts = (filters.status || filters.payment_status || filters.delivery_status || filters.admin_confirmed || filters.search)
+    ? filteredContracts
+    : contracts;
+
+  // Check if any filters are active
+  const hasActiveFilters = filters.status || filters.payment_status || filters.delivery_status || filters.admin_confirmed || filters.search;
 
   return (
     <div className="admin-contracts-container">
@@ -915,6 +1264,158 @@ export default function ContractsManagement() {
           font-weight: 500;
           font-size: 13px;
           color: #1e293b;
+        }
+
+        /* Payment Actions */
+        .payment-actions {
+          display: flex;
+          gap: 10px;
+          margin-top: 14px;
+          padding-top: 12px;
+          border-top: 1px solid #e2e8f0;
+        }
+
+        .action-btn.confirm-payment {
+          background: #e8f5e9;
+          color: #2e7d32;
+          flex: 1;
+          justify-content: center;
+        }
+
+        .action-btn.confirm-payment:hover {
+          background: #c8e6c9;
+          transform: translateY(-1px);
+        }
+
+        .action-btn.reject-payment {
+          background: #ffebee;
+          color: #c62828;
+          flex: 1;
+          justify-content: center;
+        }
+
+        .action-btn.reject-payment:hover {
+          background: #ffcdd2;
+          transform: translateY(-1px);
+        }
+
+        .payment-item.pending-payment {
+          border-left: 3px solid #b76e0a;
+        }
+
+        .payment-confirmation-info {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          margin-top: 10px;
+          padding: 8px;
+          background: #e8f5e9;
+          border-radius: 8px;
+          font-size: 11px;
+          color: #2e7d32;
+        }
+
+        .confirmation-date {
+          margin-left: auto;
+          font-size: 10px;
+          color: #64748b;
+        }
+
+        .payment-rejection-info {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          margin-top: 10px;
+          padding: 8px;
+          background: #ffebee;
+          border-radius: 8px;
+          font-size: 11px;
+          color: #c62828;
+        }
+
+        /* Payment Confirmation Modal */
+        .payment-confirm-modal .payment-summary {
+          background: #f8fafc;
+          border-radius: 12px;
+          padding: 16px;
+          margin-bottom: 20px;
+        }
+
+        .payment-confirm-modal .summary-item {
+          display: flex;
+          justify-content: space-between;
+          padding: 8px 0;
+          border-bottom: 1px solid #e2e8f0;
+        }
+
+        .payment-confirm-modal .summary-item:last-child {
+          border-bottom: none;
+        }
+
+        .payment-confirm-actions {
+          display: flex;
+          gap: 12px;
+          margin-top: 20px;
+        }
+
+        .btn-confirm-payment {
+          flex: 1;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          padding: 12px;
+          background: #2e7d32;
+          color: white;
+          border: none;
+          border-radius: 10px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .btn-confirm-payment:hover:not(:disabled) {
+          background: #1b5e20;
+          transform: translateY(-1px);
+        }
+
+        .btn-reject-payment {
+          flex: 1;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          padding: 12px;
+          background: #c62828;
+          color: white;
+          border: none;
+          border-radius: 10px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .btn-reject-payment:hover:not(:disabled) {
+          background: #b71c1c;
+          transform: translateY(-1px);
+        }
+
+        .payment-already-confirmed,
+        .payment-already-rejected {
+          text-align: center;
+          padding: 30px;
+        }
+
+        .payment-already-confirmed p,
+        .payment-already-rejected p {
+          margin: 12px 0;
+          font-weight: 500;
+        }
+
+        .payment-already-confirmed small,
+        .payment-already-rejected small {
+          color: #64748b;
+          font-size: 11px;
         }
         
         .action-icon-btn:hover {
@@ -1837,7 +2338,7 @@ export default function ContractsManagement() {
       <div className="stats-grid">
         <SummaryCard title={t('total_contracts')} value={stats.total} icon={<Handshake size={24} />} color="#2e7d32" bgColor="#e8f5e9" />
         <SummaryCard title={t('pending_contracts')} value={stats.pending} icon={<Clock size={24} />} color="#b76e0a" bgColor="#fff8e1" />
-        <SummaryCard title={t('active_contracts')} value={stats.accepted} icon={<CheckCircle size={24} />} color="#1565c0" bgColor="#e3f2fd" />
+        <SummaryCard title={t('active_contracts')} value={stats.active} icon={<TrendingUp size={24} />} color="#1565c0" bgColor="#e3f2fd" />
         <SummaryCard title={t('completed_contracts')} value={stats.completed} icon={<Award size={24} />} color="#2e7d32" bgColor="#e8f5e9" />
         <SummaryCard title={t('awaiting_admin')} value={stats.awaiting_admin} icon={<ShieldCheck size={24} />} color="#b76e0a" bgColor="#fff8e1" />
       </div>
@@ -1848,7 +2349,7 @@ export default function ContractsManagement() {
             <select className="filter-select" value={filters.status} onChange={(e) => handleFilterChange('status', e.target.value)}>
               <option value="">{t('all_statuses')}</option>
               <option value="pending">{t('pending')}</option>
-              <option value="accepted">{t('accepted')}</option>
+              <option value="accepted">{t('active')}</option>
               <option value="completed">{t('completed')}</option>
               <option value="failed">{t('failed')}</option>
             </select>
@@ -1900,12 +2401,35 @@ export default function ContractsManagement() {
         </div>
       </div>
 
+      {/* Filter info display */}
+      {hasActiveFilters && (
+        <div className="filter-info">
+          <span className="filter-badge">
+            {t('showing')}: {displayContracts.length} {t('contracts')}
+            {filters.status && ` · ${t('status')}: ${filters.status === 'accepted' ? t('active') : t(filters.status)}`}
+            {filters.payment_status && ` · ${t('payment')}: ${t(filters.payment_status)}`}
+            {filters.delivery_status && ` · ${t('delivery')}: ${t(filters.delivery_status)}`}
+            {filters.admin_confirmed && ` · ${t('admin')}: ${filters.admin_confirmed === 'true' ? t('confirmed') : t('pending')}`}
+            {filters.search && ` · ${t('search')}: "${filters.search}"`}
+            <button className="clear-filter" onClick={clearFilters}>
+              <X size={12} /> {t('clear_all')}
+            </button>
+          </span>
+        </div>
+      )}
+
       {loading ? (
         <LoadingSpinner />
-      ) : contracts.length === 0 ? (
+      ) : displayContracts.length === 0 ? (
         <div className="empty-state">
-          <FileText size={48} />
-          <p>{t('no_contracts_found')}</p>
+          <Filter size={48} />
+          <p>{hasActiveFilters ? t('no_contracts_match_filters') : t('no_contracts_found')}</p>
+          {hasActiveFilters && (
+            <button className="clear-filters-btn" onClick={clearFilters}>
+              <X size={14} />
+              {t('clear_all_filters')}
+            </button>
+          )}
         </div>
       ) : viewMode === "table" ? (
         <>
@@ -1927,7 +2451,7 @@ export default function ContractsManagement() {
                 </tr>
               </thead>
               <tbody>
-                {contracts.map(renderContractRow)}
+                {displayContracts.map(renderContractRow)}
               </tbody>
             </table>
           </div>
@@ -1940,13 +2464,13 @@ export default function ContractsManagement() {
               setPageSize(size);
               setCurrentPage(1);
             }}
-            totalItems={totalItems}
+            totalItems={displayContracts.length}
           />
         </>
       ) : (
         <>
           <div className="contracts-grid">
-            {contracts.map(renderContractCard)}
+            {displayContracts.map(renderContractCard)}
           </div>
           <Pagination
             currentPage={currentPage}
@@ -1957,7 +2481,7 @@ export default function ContractsManagement() {
               setPageSize(size);
               setCurrentPage(1);
             }}
-            totalItems={totalItems}
+            totalItems={displayContracts.length}
           />
         </>
       )}
@@ -1972,7 +2496,11 @@ export default function ContractsManagement() {
         onUpdate={handleContractAction}
         onDelete={handleContractAction}
         onRefresh={fetchContracts}
+        apiClient={apiClient}
       />
     </div>
   );
 }
+
+
+

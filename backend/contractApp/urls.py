@@ -24,6 +24,8 @@ urlpatterns = [
     path('<int:contract_id>/delivery/start/', views.start_delivery, name='contract-delivery-start'),
     path('<int:contract_id>/delivery/complete/', views.complete_delivery, name='contract-delivery-complete'),
     path('<int:contract_id>/delivery/fail/', views.fail_delivery, name='contract-delivery-fail'),
+    path('<int:contract_id>/delivery/update/', views.update_delivery, name='contract-delivery-update'),
+    
 
     # ── Payment management ───────────────────────────────────────────────
     path('<int:contract_id>/payments/', views.get_contract_payments, name='contract-payments'),

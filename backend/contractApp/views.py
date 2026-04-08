@@ -12,7 +12,7 @@ from .serializers import (
     ContractSerializer, CreateContractSerializer,
     UpdateContractSerializer, AddPaymentSerializer,
     PaymentRecordSerializer, StartDeliverySerializer, CompleteDeliverySerializer,
-    ContractActivitySerializer,
+    ContractActivitySerializer, UpdateDeliverySerializer,
 )
 from userApp.models import CustomUser
 from .translations import ct
@@ -1145,6 +1145,84 @@ def get_delivery_status(request, contract_id):
             status=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def update_delivery(request, contract_id):
+    """Update delivery details (like notes or deliver person) while in progress."""
+    lang = get_lang(request)
+    
+    print(f"\n[update_delivery] User #{request.user.id} is updating delivery for contract #{contract_id} with data: {request.data}\n")
+    
+    try:
+        user = request.user
+        try:
+            contract = Contract.objects.get(id=contract_id)
+        except Contract.DoesNotExist:
+            return Response(
+                {'error': ct('contract_not_found', lang)},
+                status=http_status.HTTP_404_NOT_FOUND,
+            )
+
+        is_admin = user.role == 'admin'
+        is_farmer = contract.farmer_id == user.id
+        is_deliver = contract.deliver_id == user.id
+
+        if not (is_admin or is_farmer or is_deliver):
+            return Response(
+                {'error': ct('no_permission', lang)},
+                status=http_status.HTTP_403_FORBIDDEN,
+            )
+
+        if contract.delivery_status != Contract.DELIVERY_IN_PROGRESS:
+            return Response(
+                {'error': ct('delivery_not_in_progress', lang)},
+                status=http_status.HTTP_400_BAD_REQUEST,
+            )
+
+        serializer = UpdateDeliverySerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(
+                {'error': ct('invalid_data', lang), 'details': serializer.errors},
+                status=http_status.HTTP_400_BAD_REQUEST,
+            )
+
+        data = serializer.validated_data
+        
+        with transaction.atomic():
+            if data.get('delivery_notes'):
+                contract.delivery_notes = data['delivery_notes']
+            
+            # Update deliver person if provided
+            if data.get('deliver_person'):
+                try:
+                    new_deliver = CustomUser.objects.get(id=data['deliver_person'], is_active=True)
+                    contract.deliver = new_deliver
+                except CustomUser.DoesNotExist:
+                    pass
+            
+            contract.save()
+            
+            log_activity(contract, 'delivery_updated', user)
+
+        extra = {'crop': contract.crop_name, 'id': contract.id}
+        notify_contract_parties(
+            contract,
+            title_key='notif_delivery_updated_title',
+            body_key='notif_delivery_updated_body',
+            sender=user,
+            extra_kwargs=extra,
+        )
+
+        return Response({
+            'success': True,
+            'message': ct('delivery_updated', lang),
+        })
+
+    except Exception as e:
+        return Response(
+            {'error': str(e)},
+            status=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
 
 # ══════════════════════════════════════════════════════════════════════════════
 # PAYMENT MANAGEMENT
@@ -1158,6 +1236,7 @@ def add_payment(request, contract_id):
     Admin can auto-confirm, buyer payments start as pending.
     """
     lang = get_lang(request)
+    print(f"\n[add_payment] User #{request.user.id} is adding payment to contract #{contract_id} with \n data: {request.data}\n")
     
     try:
         user = request.user

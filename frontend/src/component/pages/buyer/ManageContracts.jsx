@@ -46,6 +46,7 @@ const paypackAPI = {
                     }
                 }
             );
+            console.log('Paypack authentication response:', response.data);
             return response.data;
         } catch (error) {
             console.error('Paypack authentication error:', error);
@@ -70,6 +71,7 @@ const paypackAPI = {
                     }
                 }
             );
+            console.log('Paypack cashin response:', response.data);
             return response.data;
         } catch (error) {
             console.error('Paypack cashin error:', error);
@@ -88,6 +90,7 @@ const paypackAPI = {
                     }
                 }
             );
+            console.log('Paypack transaction status response:', response.data);
             return response.data;
         } catch (error) {
             console.error('Transaction check error:', error);
@@ -270,21 +273,34 @@ function LocationSelector({ value, onChange, error, t }) {
 }
 
 function StatusBadge({ status, type = "contract" }) {
-    const config = statusColors[status] || statusColors.pending;
+    const { t } = useTranslation();
+
+    // Extended status colors for user-specific statuses
+    const extendedStatusColors = {
+        ...statusColors,
+        pending_action: { bg: "#fff8e1", color: "#b76e0a", icon: Clock },
+        awaiting_confirmation: { bg: "#e3f2fd", color: "#1565c0", icon: ShieldCheck },
+        active: { bg: "#e8f5e9", color: "#2e7d32", icon: TrendingUp }
+    };
+
+    const config = extendedStatusColors[status] || statusColors.pending;
     const Icon = config.icon;
 
     const statusLabels = {
-        pending: "Pending",
-        accepted: "Accepted",
-        rejected: "Rejected",
-        completed: "Completed",
-        failed: "Failed",
-        in_progress: "In Progress"
+        pending: t('pending'),
+        accepted: t('accepted'),
+        rejected: t('rejected'),
+        completed: t('completed'),
+        failed: t('failed'),
+        in_progress: t('in_progress'),
+        pending_action: t('pending_your_action'),
+        awaiting_confirmation: t('awaiting_admin_confirmation'),
+        active: t('active')
     };
 
     return (
         <div className="status-badge" style={{ backgroundColor: config.bg, color: config.color }}>
-            <Icon size={12} />
+            {Icon && <Icon size={12} />}
             <span>{statusLabels[status] || status}</span>
         </div>
     );
@@ -371,52 +387,7 @@ function Pagination({ currentPage, totalPages, onPageChange, pageSize, onPageSiz
     );
 }
 
-// ─── Contract Form Modal ──────────────────────────────────────────────────────
 
-// ─── ContractFormModal — complete rewrite ────────────────────────────────────
-//
-// Fixes applied
-// ─────────────────────────────────────────────────────────────────────────────
-// 1. PREFERRED LOCATION  — buyer_preferred_location (or buyer_preferred_delivery_location)
-//    is pre-filled as delivery_location and shown as a green badge.
-//
-// 2. LOCATION CHANGE MUST BE COMPLETE — when the buyer clicks "Change", the
-//    LocationSelectorStrict component is shown.  It only fires onValidChange
-//    (and therefore only sets the new location) after ALL THREE of
-//    province → district → sector are chosen.  The submit button is disabled
-//    while the selector is open.
-//
-// 3. DELIVER PERSON ID — resolved via useMemo, never stored in formData:
-//      delivery_type === "self"   → deliver = buyer  id
-//      delivery_type === "farmer" → deliver = farmer id
-//
-// 4. CONSOLE LOGGING — two log groups:
-//      📦  fires when the modal opens (confirms stockData prop)
-//      📝  fires on submit (shows final payload)
-//
-// Usage
-// ─────────────────────────────────────────────────────────────────────────────
-// Pass apiClient as a prop so the modal can call /users/me/ and /users/
-// (previously apiClient was referenced from the outer closure; passing it
-// explicitly makes the component self-contained):
-//
-//   <ContractFormModal
-//     isOpen={showCreateModal}
-//     onClose={() => { setShowCreateModal(false); setStockData(null); }}
-//     onSubmit={handleCreateContract}
-//     mode="create"
-//     stockData={stockData}
-//     apiClient={apiClient}          ← add this prop
-//   />
-//
-// ─────────────────────────────────────────────────────────────────────────────
-
-
-// ══════════════════════════════════════════════════════════════════════════════
-//  LocationSelectorStrict
-//  Fires onValidChange ONLY when province + district + sector are all selected.
-//  No "anywhere" option — delivery locations must be specific.
-// ══════════════════════════════════════════════════════════════════════════════
 // WITH this complete version (has the full JSX return):
 function LocationSelectorStrict({ onValidChange, error, t, initialLocation = "" }) {
     const parseInitial = (loc) => {
@@ -425,14 +396,14 @@ function LocationSelectorStrict({ onValidChange, error, t, initialLocation = "" 
         return {
             province: parts[0] || "",
             district: parts[1] || "",
-            sector:   parts[2] || "",
+            sector: parts[2] || "",
         };
     };
 
     const initial = parseInitial(initialLocation);
     const [province, setProvince] = useState(initial.province);
     const [district, setDistrict] = useState(initial.district);
-    const [sector,   setSector]   = useState(initial.sector);
+    const [sector, setSector] = useState(initial.sector);
 
     // If all three parts are already filled on mount, notify parent immediately
     // so the badge shows without the user having to re-select anything
@@ -479,10 +450,10 @@ function LocationSelectorStrict({ onValidChange, error, t, initialLocation = "" 
     const stepHint = !province
         ? (t("step_1_select_province") || "Step 1 of 3 — Select a province")
         : !district
-        ? (t("step_2_select_district") || "Step 2 of 3 — Select a district")
-        : !sector
-        ? (t("step_3_select_sector")   || "Step 3 of 3 — Select a sector to confirm")
-        : null;
+            ? (t("step_2_select_district") || "Step 2 of 3 — Select a district")
+            : !sector
+                ? (t("step_3_select_sector") || "Step 3 of 3 — Select a sector to confirm")
+                : null;
 
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
@@ -553,7 +524,6 @@ function LocationSelectorStrict({ onValidChange, error, t, initialLocation = "" 
 }
 
 
-// ══════════════════════════════════════════════════════════════════════════════
 //  ContractFormModal
 // ══════════════════════════════════════════════════════════════════════════════
 function ContractFormModal({
@@ -602,10 +572,6 @@ function ContractFormModal({
     // false → confirmed location badge is visible
     const [showLocationSelector, setShowLocationSelector] = useState(false);
 
-    // ── derived: who is the deliver person? ──────────────────────────────────
-    // Computed fresh on every render — never stored in formData to avoid
-    // async state-update races when delivery_type, buyer, or farmer change.
-    // AFTER — extract .id if either value was accidentally stored as an object
     const resolvedDeliver = useMemo(() => {
         const raw = formData.delivery_type === "farmer"
             ? formData.farmer
@@ -1467,47 +1433,42 @@ function PaymentModal({ isOpen, onClose, onSubmit, contract, onPaymentInitiated 
         setPaymentStatus("processing");
 
         try {
-            // Step 1: Authenticate with Paypack
+            // Authenticate
             const auth = await paypackAPI.authenticate();
             const accessToken = auth.access;
 
-            // Step 2: Make the payment
+            // Initiate cashin
             const payment = await paypackAPI.cashin(
                 paymentData.phone_number,
                 parseFloat(paymentData.amount),
                 accessToken
             );
 
-            if (payment.ref) {
-                setTransactionRef(payment.ref);
-                setPaymentStatus("pending");
-
-                // Step 3: Poll for status
-                const interval = setInterval(async () => {
-                    const status = await paypackAPI.checkTransaction(payment.ref, accessToken);
-                    if (status.status === "successful") {
-                        clearInterval(interval);
-                        setPaymentStatus("success");
-                        toast.success(t('payment_successful'));
-                        await onSubmit({
-                            ...paymentData,
-                            amount: parseFloat(paymentData.amount),
-                            reference_number: payment.ref
-                        });
-                        onClose();
-                    } else if (status.status === "failed") {
-                        clearInterval(interval);
-                        setPaymentStatus("failed");
-                        toast.error(t('payment_failed'));
-                    }
-                }, 3000);
-
-                setPollingInterval(interval);
+            if (!payment.ref) {
+                throw new Error("No transaction reference received");
             }
+
+            setTransactionRef(payment.ref);
+
+            // ✅ IMMEDIATELY record payment in your backend
+            const backendPayload = {
+                amount: parseFloat(paymentData.amount),
+                payment_method: "mobile_money",
+                reference_number: payment.ref,
+                notes: `Paypack payment - Status: ${payment.status}, Provider: ${payment.provider}, Ref: ${payment.ref}`,
+                paid_at: payment.created_at || new Date().toISOString(),
+                paypack_status: payment.status  // Store the pending status
+            };
+
+            await onSubmit(backendPayload);
+
+            toast.success(t('payment_initiated_successfully'));
+            onClose();
+
         } catch (error) {
             console.error("Payment error:", error);
+            toast.error(t('payment_failed'));
             setPaymentStatus("failed");
-            toast.error(t('payment_error'));
         } finally {
             setLoading(false);
         }
@@ -2113,6 +2074,8 @@ function ContractDetailsModal({ isOpen, onClose, contract, onUpdate, onPayment, 
     );
 }
 
+
+
 // ─── Main Component ──────────────────────────────────────────────────────────
 
 export default function BuyerContracts() {
@@ -2140,9 +2103,63 @@ export default function BuyerContracts() {
     // Filter state
     const [statusFilter, setStatusFilter] = useState("");
     const [searchTerm, setSearchTerm] = useState("");
+    const [filteredContracts, setFilteredContracts] = useState([]);
 
     // Stock data for creating contract from matching
     const [stockData, setStockData] = useState(null);
+
+    // Helper function to determine display status
+    // Helper function to determine display status based on user role
+    const getDisplayStatus = useCallback((contract, userRole = "farmer") => {
+        const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+        const isBuyer = contract.buyer === currentUser.id;
+        const isFarmer = contract.farmer === currentUser.id;
+
+        // Get user's individual status
+        let userStatus = null;
+        let otherPartyStatus = null;
+
+        if (isBuyer) {
+            userStatus = contract.buyer_status;
+            otherPartyStatus = contract.farmer_status;
+        } else if (isFarmer) {
+            userStatus = contract.farmer_status;
+            otherPartyStatus = contract.buyer_status;
+        }
+
+        // If user rejected the contract
+        if (userStatus === "rejected") {
+            return "rejected";
+        }
+
+        // If user hasn't responded yet and other party hasn't accepted
+        if (userStatus === "pending" && otherPartyStatus !== "accepted") {
+            return "pending";
+        }
+
+        // If user hasn't responded but other party accepted (waiting for user)
+        if (userStatus === "pending" && otherPartyStatus === "accepted") {
+            return "pending_action"; // Special status for waiting
+        }
+
+        // If user accepted but contract not yet admin confirmed
+        if (userStatus === "accepted" && !contract.admin_confirmed) {
+            return "awaiting_confirmation";
+        }
+
+        // If contract is fully paid AND delivery is completed, it should be completed
+        if (contract.is_fully_paid && contract.delivery_status === "completed") {
+            return "completed";
+        }
+
+        // If contract is accepted and admin confirmed
+        if (contract.status === "accepted" && contract.admin_confirmed) {
+            return "active";
+        }
+
+        // Default to contract status
+        return contract.status;
+    }, []);
 
     // API Client
     const apiClient = useMemo(() => {
@@ -2175,6 +2192,96 @@ export default function BuyerContracts() {
         return client;
     }, [t, navigate]);
 
+    // Add this function to check if user can edit contract
+    const canEditContract = (contract) => {
+        // Only pending contracts can be edited
+        if (contract.status !== "pending") return false;
+
+        const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+        // created_by is a direct ID in your data
+        return contract.created_by === currentUser.id;
+    };
+
+    // Add this function to check if user can update delivery
+    const canUpdateDelivery = (contract) => {
+        const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+
+        // Admin can always update
+        if (currentUser.role === "admin") return true;
+
+        // Check if delivery is already completed - cannot change completed delivery
+        if (contract.delivery_status === "completed") return false;
+
+        // In your data, these are direct IDs
+        const farmerId = contract.farmer;
+        const deliverId = contract.deliver;
+
+        // Farmer or deliver person can update delivery
+        return (farmerId === currentUser.id || deliverId === currentUser.id);
+    };
+
+    // Add this function to check if user can start delivery
+    const canStartDelivery = (contract) => {
+        const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+
+        // Cannot start if already completed or in progress
+        if (contract.delivery_status !== "pending") return false;
+
+        // Check if contract allows delivery to start
+        if (!contract.can_start_delivery) return false;
+
+        // In your data, these are direct IDs
+        const farmerId = contract.farmer;
+        const deliverId = contract.deliver;
+
+        // Admin, farmer, or deliver person can start delivery
+        return (currentUser.role === "admin" || farmerId === currentUser.id || deliverId === currentUser.id);
+    };
+
+    // Add this function to check if user can complete delivery
+    const canCompleteDelivery = (contract) => {
+        const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+
+        // Cannot complete if not in progress
+        if (contract.delivery_status !== "in_progress") return false;
+
+        // In your data, these are direct IDs
+        const farmerId = contract.farmer;
+        const deliverId = contract.deliver;
+
+        // Admin, farmer, or deliver person can complete delivery
+        return (currentUser.role === "admin" || farmerId === currentUser.id || deliverId === currentUser.id);
+    };
+
+    // Add this function to check if user can accept/reject contract
+    const canAcceptRejectContract = (contract) => {
+        const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+
+        // Only pending contracts can be accepted/rejected
+        if (contract.status !== "pending") return false;
+
+        // In your data, these are direct IDs
+        const buyerId = contract.buyer;
+        const farmerId = contract.farmer;
+
+        // User can accept/reject if they are the buyer or farmer
+        return (buyerId === currentUser.id || farmerId === currentUser.id);
+    };
+
+    // Add this function to check if user can make payment
+    const canMakePayment = (contract) => {
+        const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+
+        // In your data, buyer is a direct ID
+        const buyerId = contract.buyer;
+
+        // Only buyer can make payments
+        if (buyerId !== currentUser.id) return false;
+
+        // Check if payment is allowed
+        return contract.can_proceed_to_payment && !contract.is_fully_paid;
+    };
+
     // Check if coming from market matching
     useEffect(() => {
         if (location.state?.stockData && location.state?.openCreateModal) {
@@ -2193,7 +2300,7 @@ export default function BuyerContracts() {
     // Handle create from crops
     const handleCreateFromCrops = () => {
         setShowCreateOptions(false);
-        navigate('/buyer/stocks'); // Navigate to crops/stocks page
+        navigate('/buyer/stocks');
     };
 
     // Handle create from market matching
@@ -2202,19 +2309,75 @@ export default function BuyerContracts() {
         navigate('/buyer/market-matches');
     };
 
-    // Fetch contracts
+    // Helper function to filter contracts based on selected status and search term
+    const filterContracts = useCallback((contractsList, statusValue, searchValue) => {
+        let filtered = [...contractsList];
+
+        // Apply status filter using display_status
+        if (statusValue) {
+            filtered = filtered.filter(contract => {
+                // Map filter values to display_status values
+                let filterStatus = statusValue;
+
+                // Map "accepted" filter to show "active" and "awaiting_confirmation" contracts
+                if (statusValue === "accepted") {
+                    return contract.display_status === "active" ||
+                        contract.display_status === "awaiting_confirmation";
+                }
+
+                // Map "pending" filter to show "pending" and "pending_action"
+                if (statusValue === "pending") {
+                    return contract.display_status === "pending" ||
+                        contract.display_status === "pending_action";
+                }
+
+                // Direct match for other statuses
+                return contract.display_status === filterStatus;
+            });
+        }
+
+        // Apply search filter
+        if (searchValue) {
+            const searchLower = searchValue.toLowerCase();
+            filtered = filtered.filter(contract =>
+                contract.crop_name?.toLowerCase().includes(searchLower) ||
+                contract.farmer_detail?.full_name?.toLowerCase().includes(searchLower) ||
+                contract.buyer_detail?.full_name?.toLowerCase().includes(searchLower) ||
+                contract.id?.toString().includes(searchLower)
+            );
+        }
+
+        return filtered;
+    }, []);
+
+    // Update fetchContracts to also filter after fetching
     const fetchContracts = useCallback(async () => {
         setLoading(true);
         try {
             const params = new URLSearchParams({
                 page: currentPage,
                 page_size: pageSize,
-                ...(statusFilter && { status: statusFilter }),
+                // Note: We're not sending status to API anymore since we filter on frontend
                 ...(searchTerm && { search: searchTerm })
             });
 
+            // Fetch all contracts for the current page (no status filter from API)
             const response = await apiClient.get(`/contract/my/?${params}`);
-            setContracts(response.data.contracts || []);
+            console.log("📄 Fetched contracts:", response.data);
+
+            const rawContracts = response.data.contracts || [];
+
+            // Add display_status to each contract
+            const contractsWithDisplayStatus = rawContracts.map(contract => ({
+                ...contract,
+                display_status: getDisplayStatus(contract)
+            }));
+
+            // Apply frontend filters
+            const filtered = filterContracts(contractsWithDisplayStatus, statusFilter, searchTerm);
+
+            setContracts(contractsWithDisplayStatus);
+            setFilteredContracts(filtered);
             setTotalItems(response.data.total || 0);
             setTotalPages(Math.ceil((response.data.total || 0) / pageSize));
         } catch (error) {
@@ -2223,7 +2386,49 @@ export default function BuyerContracts() {
         } finally {
             setLoading(false);
         }
-    }, [apiClient, currentPage, pageSize, statusFilter, searchTerm, t]);
+    }, [apiClient, currentPage, pageSize, statusFilter, searchTerm, t, getDisplayStatus, filterContracts]);
+
+    // Update effect to re-filter when statusFilter, searchTerm, or contracts change
+    useEffect(() => {
+        if (contracts.length > 0) {
+            const filtered = filterContracts(contracts, statusFilter, searchTerm);
+            setFilteredContracts(filtered);
+        }
+    }, [statusFilter, searchTerm, contracts, filterContracts]);
+
+    // Update statistics to use filtered contracts or all contracts based on view
+    const stats = useMemo(() => {
+        const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+        const statsContracts = filteredContracts.length > 0 ? filteredContracts : contracts;
+
+        const total = statsContracts.length;
+
+        // For pending: contracts where user hasn't accepted/rejected yet
+        const pending = statsContracts.filter(c => {
+            const isBuyer = c.buyer === currentUser.id;
+            const isFarmer = c.farmer === currentUser.id;
+            const userStatus = isBuyer ? c.buyer_status : (isFarmer ? c.farmer_status : null);
+            return (userStatus === "pending" && c.status !== "rejected") ||
+                c.display_status === "pending" ||
+                c.display_status === "pending_action";
+        }).length;
+
+        // For active: contracts that are accepted, admin confirmed, and not completed
+        const active = statsContracts.filter(c => {
+            return c.display_status === "active" || c.display_status === "awaiting_confirmation";
+        }).length;
+
+        // For completed: contracts that are fully paid and delivered or rejected
+        const completed = statsContracts.filter(c => {
+            return c.display_status === "completed" || c.display_status === "rejected";
+        }).length;
+
+        const totalValue = statsContracts.reduce((sum, c) => sum + (c.total_amount || 0), 0);
+        const paidValue = statsContracts.reduce((sum, c) => sum + (c.amount_paid || 0), 0);
+
+        return { total, pending, active, completed, totalValue, paidValue };
+    }, [contracts, filteredContracts]);
+
 
     useEffect(() => {
         fetchContracts();
@@ -2280,17 +2485,38 @@ export default function BuyerContracts() {
     };
 
     const handleAddPayment = async (paymentData) => {
+        console.log("📤 handleAddPayment called with:", paymentData);
+        console.log("📤 Selected contract:", selectedContract);
+
+        if (!selectedContract || !selectedContract.id) {
+            console.error("❌ No contract selected for payment");
+            toast.error("Contract not selected. Please try again.");
+            throw new Error("No contract selected");
+        }
+
         try {
-            const response = await apiClient.post(`/contract/${selectedContract.id}/payments/add/`, paymentData);
+            const url = `/contract/${selectedContract.id}/payments/add/`;
+            console.log("📤 POST to:", url);
+
+            const response = await apiClient.post(url, paymentData);
+            console.log("✅ Backend response:", response.data);
+
             toast.success(t('payment_added_successfully'));
-            fetchContracts();
-            setShowPaymentModal(false);
+            await fetchContracts();
+
             if (selectedContract) {
                 const updated = await apiClient.get(`/contract/${selectedContract.id}/`);
                 setSelectedContract(updated.data);
             }
+
+            setShowPaymentModal(false);
             return response.data;
+
         } catch (error) {
+            console.error("❌ Backend error in handleAddPayment:", error);
+            console.error("❌ Error response data:", error.response?.data);
+            console.error("❌ Error status:", error.response?.status);
+
             toast.error(error.response?.data?.error || t('failed_to_add_payment'));
             throw error;
         }
@@ -2333,23 +2559,70 @@ export default function BuyerContracts() {
         }
     };
 
-    // Statistics
-    const stats = useMemo(() => {
-        const total = contracts.length;
-        const pending = contracts.filter(c => c.status === "pending").length;
-        const accepted = contracts.filter(c => c.status === "accepted").length;
-        const completed = contracts.filter(c => c.status === "completed").length;
-        const totalValue = contracts.reduce((sum, c) => sum + (c.total_amount || 0), 0);
-        const paidValue = contracts.reduce((sum, c) => sum + (c.amount_paid || 0), 0);
 
-        return { total, pending, accepted, completed, totalValue, paidValue };
-    }, [contracts]);
-
-    // Render contract card
+    // Render contract card - using display_status
     const renderContractCard = (contract) => {
-        const canAccept = contract.buyer_status === "pending" && contract.status === "pending";
-        const canReject = contract.buyer_status === "pending" && contract.status === "pending";
-        const canPay = contract.can_proceed_to_payment && !contract.is_fully_paid;
+        const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+
+        const buyerId = contract.buyer;
+        const farmerId = contract.farmer;
+        const deliverId = contract.deliver;
+        const createdById = contract.created_by;
+
+        const canEdit = canEditContract(contract);
+
+        // Get user-specific statuses
+        const isBuyer = buyerId === currentUser.id;
+        const isFarmer = farmerId === currentUser.id;
+
+        let userStatus = null;
+        let otherPartyStatus = null;
+        let userRole = "";
+
+        if (isBuyer) {
+            userStatus = contract.buyer_status;
+            otherPartyStatus = contract.farmer_status;
+            userRole = "buyer";
+        } else if (isFarmer) {
+            userStatus = contract.farmer_status;
+            otherPartyStatus = contract.buyer_status;
+            userRole = "farmer";
+        }
+
+        // Determine display status
+        let displayStatus = contract.display_status;
+
+        // Override display status based on user's individual status
+        if (userStatus === "rejected") {
+            displayStatus = "rejected";
+        } else if (userStatus === "pending" && otherPartyStatus === "accepted") {
+            displayStatus = "pending_action";
+        } else if (userStatus === "accepted" && !contract.admin_confirmed) {
+            displayStatus = "awaiting_confirmation";
+        } else if (contract.status === "accepted" && contract.admin_confirmed && !contract.is_fully_paid) {
+            displayStatus = "active";
+        }
+
+        // Determine if user can accept/reject
+        const canAccept = (userStatus === "pending") &&
+            contract.status === "pending" &&
+            !userRejected;
+
+        const canReject = (userStatus === "pending") &&
+            contract.status === "pending";
+
+        const userAccepted = userStatus === "accepted";
+        const userRejected = userStatus === "rejected";
+
+        // Check if waiting for other party
+        const waitingForOther = userStatus === "pending" && otherPartyStatus === "pending";
+        const otherPartyAccepted = otherPartyStatus === "accepted" && userStatus === "pending";
+
+        // Payment and delivery permissions
+        const canPay = canMakePayment(contract);
+        const canStartDel = canStartDelivery(contract);
+        const canCompleteDel = canCompleteDelivery(contract);
+        const canUpdateDel = canUpdateDelivery(contract);
 
         return (
             <div key={contract.id} className="contract-card">
@@ -2357,8 +2630,11 @@ export default function BuyerContracts() {
                     <div className="contract-info">
                         <h3>{contract.crop_name}</h3>
                         <div className="contract-id">#{contract.id}</div>
+                        {createdById === currentUser.id && (
+                            <span className="creator-badge">Created by you</span>
+                        )}
                     </div>
-                    <StatusBadge status={contract.status} />
+                    <StatusBadge status={displayStatus} />
                 </div>
 
                 <div className="contract-card-details">
@@ -2372,6 +2648,7 @@ export default function BuyerContracts() {
                             <span>{contract.price_per_kg?.toLocaleString()} RWF/kg</span>
                         </div>
                     </div>
+
                     <div className="detail-row">
                         <div className="detail">
                             <span className="label">{t('total')}:</span>
@@ -2382,25 +2659,96 @@ export default function BuyerContracts() {
                             <strong>{contract.amount_paid?.toLocaleString()} RWF</strong>
                         </div>
                     </div>
+
                     <div className="progress-bar-container small">
                         <div
                             className="progress-bar"
                             style={{ width: `${(contract.amount_paid / contract.total_amount) * 100}%` }}
                         />
                     </div>
+
                     <div className="detail-row">
                         <div className="detail">
                             <User size={14} />
-                            <span>{contract.farmer_detail?.full_name}</span>
+                            <span>{isFarmer ? "You (Farmer)" : contract.farmer_detail?.full_name}</span>
+                            {!isFarmer && contract.farmer_status === "accepted" && (
+                                <CheckCircle size={12} color="#2e7d32" title="Farmer has accepted" />
+                            )}
+                            {!isFarmer && contract.farmer_status === "rejected" && (
+                                <XCircle size={12} color="#c62828" title="Farmer has rejected" />
+                            )}
                         </div>
                         <div className="detail">
                             <Truck size={14} />
-                            <StatusBadge status={contract.delivery_status} type="delivery" size="small" />
+                            <StatusBadge status={contract.delivery_status} type="delivery" />
                         </div>
                     </div>
+
+                    <div className="detail-row">
+                        <div className="detail">
+                            <Handshake size={14} />
+                            <span>
+                                {isBuyer ? "You (Buyer)" : contract.buyer_detail?.full_name}
+                            </span>
+                            {!isBuyer && contract.buyer_status === "accepted" && (
+                                <CheckCircle size={12} color="#2e7d32" title="Buyer has accepted" />
+                            )}
+                            {!isBuyer && contract.buyer_status === "rejected" && (
+                                <XCircle size={12} color="#c62828" title="Buyer has rejected" />
+                            )}
+                        </div>
+                        <div className="detail">
+                            <ShieldCheck size={14} />
+                            <span>
+                                {contract.admin_confirmed ?
+                                    "✓ Admin confirmed" :
+                                    "⏳ Awaiting admin"}
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Show user's acceptance status */}
+                    {userAccepted && (
+                        <div className="acceptance-status accepted">
+                            <CheckCircle size={12} /> You have accepted this contract
+                            {!contract.admin_confirmed && (
+                                <span className="waiting-badge">Waiting for admin confirmation</span>
+                            )}
+                        </div>
+                    )}
+
+                    {userRejected && (
+                        <div className="acceptance-status rejected">
+                            <XCircle size={12} /> You have rejected this contract
+                        </div>
+                    )}
+
+                    {/* Show other party's status when waiting */}
+                    {waitingForOther && (
+                        <div className="waiting-status">
+                            <Clock size={12} />
+                            Waiting for the other party to respond...
+                        </div>
+                    )}
+
+                    {otherPartyAccepted && (
+                        <div className="waiting-status">
+                            <CheckCircle size={12} color="#2e7d32" />
+                            The other party has accepted. Please review and respond.
+                        </div>
+                    )}
+
+                    {/* Show admin confirmation needed */}
+                    {userAccepted && otherPartyStatus === "accepted" && !contract.admin_confirmed && (
+                        <div className="waiting-status">
+                            <ShieldCheck size={12} />
+                            Both parties have accepted. Waiting for admin confirmation...
+                        </div>
+                    )}
                 </div>
 
                 <div className="contract-card-actions">
+                    {/* View Details - Always visible */}
                     <button
                         className="action-btn view"
                         onClick={() => {
@@ -2409,23 +2757,46 @@ export default function BuyerContracts() {
                         }}
                     >
                         <Eye size={14} />
-                        {t('view')}
+                        {t('view_details')}
                     </button>
 
-                    {canAccept && (
-                        <button className="action-btn accept" onClick={() => handleAcceptContract(contract.id)}>
+                    {/* Edit - Only for creator when pending and not yet accepted/rejected */}
+                    {canEdit && userStatus === "pending" && (
+                        <button
+                            className="action-btn edit"
+                            onClick={() => {
+                                setSelectedContract(contract);
+                                setShowEditModal(true);
+                            }}
+                        >
+                            <Edit2 size={14} />
+                            {t('edit')}
+                        </button>
+                    )}
+
+                    {/* Accept - When user hasn't responded yet */}
+                    {canAccept && !userAccepted && !userRejected && (
+                        <button
+                            className="action-btn accept"
+                            onClick={() => handleAcceptContract(contract.id)}
+                        >
                             <CheckCircle size={14} />
                             {t('accept')}
                         </button>
                     )}
 
-                    {canReject && (
-                        <button className="action-btn reject" onClick={() => handleRejectContract(contract.id)}>
+                    {/* Reject - When user hasn't responded yet */}
+                    {canReject && !userAccepted && !userRejected && (
+                        <button
+                            className="action-btn reject"
+                            onClick={() => handleRejectContract(contract.id)}
+                        >
                             <XCircle size={14} />
                             {t('reject')}
                         </button>
                     )}
 
+                    {/* Make Payment - Only for buyer when allowed */}
                     {canPay && (
                         <button
                             className="action-btn payment"
@@ -2439,10 +2810,39 @@ export default function BuyerContracts() {
                         </button>
                     )}
 
-                    {contract.can_start_delivery && contract.delivery_status === "pending" && (
-                        <button className="action-btn delivery" onClick={() => handleStartDelivery(contract.id)}>
+                    {/* Start Delivery - For farmer/deliver/admin when allowed */}
+                    {canStartDel && (
+                        <button
+                            className="action-btn delivery"
+                            onClick={() => handleStartDelivery(contract.id)}
+                        >
                             <Truck size={14} />
                             {t('start_delivery')}
+                        </button>
+                    )}
+
+                    {/* Update Delivery - For farmer/deliver/admin when in progress */}
+                    {canUpdateDel && contract.delivery_status === "in_progress" && (
+                        <button
+                            className="action-btn delivery"
+                            onClick={() => {
+                                setSelectedContract(contract);
+                                setShowDeliveryModal(true);
+                            }}
+                        >
+                            <Edit2 size={14} />
+                            {t('update_delivery')}
+                        </button>
+                    )}
+
+                    {/* Complete Delivery - For farmer/deliver/admin when in progress */}
+                    {canCompleteDel && (
+                        <button
+                            className="action-btn complete"
+                            onClick={() => handleCompleteDelivery(contract.id)}
+                        >
+                            <CheckCircle size={14} />
+                            {t('complete_delivery')}
                         </button>
                     )}
                 </div>
@@ -2517,1225 +2917,1321 @@ export default function BuyerContracts() {
         );
     };
 
+    // Filter options based on display_status
+    const handleStatusFilterChange = (value) => {
+        setStatusFilter(value);
+        setCurrentPage(1);
+    };
+
     return (
         <div className="contracts-container">
             <ToastContainer position="top-right" autoClose={5000} />
 
             <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        
-        .contracts-container {
-          font-family: 'Inter', sans-serif;
-          background-color: #f8fafc;
-          min-height: 100vh;
-          padding: 24px;
-        }
-        
-        /* Header */
-        .page-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 24px;
-          flex-wrap: wrap;
-          gap: 16px;
-        }
-        
-        .header-left h1 {
-          font-size: 28px;
-          font-weight: 700;
-          color: #0f172a;
-          margin: 0 0 4px 0;
-        }
-        
-        .header-left p {
-          font-size: 14px;
-          color: #64748b;
-          margin: 0;
-        }
-        
-        .create-btn {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          padding: 12px 24px;
-          background: linear-gradient(135deg, #1e3c1e 0%, #2d5a2d 100%);
-          color: white;
-          border: none;
-          border-radius: 12px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.3s ease;
-        }
-        
-        .create-btn:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 10px 20px rgba(45, 90, 45, 0.2);
-        }
-        
-        /* Stats Grid */
-        .stats-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-          gap: 16px;
-          margin-bottom: 24px;
-        }
-        
-        .stat-card {
-          background: white;
-          border-radius: 16px;
-          padding: 16px 20px;
-          display: flex;
-          align-items: center;
-          gap: 16px;
-          box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
-        }
-        
-        .stat-icon {
-          width: 48px;
-          height: 48px;
-          border-radius: 12px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-        
-        .stat-info {
-          flex: 1;
-        }
-        
-        .stat-value {
-          font-size: 24px;
-          font-weight: 700;
-          color: #0f172a;
-        }
-        
-        .stat-label {
-          font-size: 13px;
-          color: #64748b;
-        }
-        
-        /* Filter Bar */
-        .filter-bar {
-          background: white;
-          border-radius: 16px;
-          padding: 16px 20px;
-          margin-bottom: 24px;
-          display: flex;
-          gap: 16px;
-          flex-wrap: wrap;
-          align-items: center;
-          box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
-        }
-        
-        .search-wrapper {
-          flex: 1;
-          min-width: 250px;
-          position: relative;
-        }
-        
-        .search-input {
-          width: 100%;
-          padding: 10px 16px;
-          padding-left: 40px;
-          border: 1px solid #e2e8f0;
-          border-radius: 10px;
-          font-size: 14px;
-        }
-        
-        .search-icon {
-          position: absolute;
-          left: 12px;
-          top: 50%;
-          transform: translateY(-50%);
-          color: #94a3b8;
-        }
-        
-        .status-filter {
-          padding: 10px 16px;
-          border: 1px solid #e2e8f0;
-          border-radius: 10px;
-          font-size: 14px;
-          min-width: 150px;
-        }
-        
-        /* Contracts Grid */
-        .contracts-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
-          gap: 20px;
-        }
-        
-        .contract-card {
-          background: white;
-          border-radius: 16px;
-          overflow: hidden;
-          box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
-          transition: all 0.3s ease;
-        }
-        
-        .contract-card:hover {
-          transform: translateY(-4px);
-          box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
-        }
-        
-        .contract-card-header {
-          padding: 16px 20px;
-          background: #f8fafc;
-          border-bottom: 1px solid #e2e8f0;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-        }
-        
-        .contract-info h3 {
-          font-size: 16px;
-          font-weight: 600;
-          color: #0f172a;
-          margin: 0 0 4px 0;
-        }
-        
-        .contract-id {
-          font-size: 12px;
-          color: #64748b;
-        }
-        
-        .contract-card-details {
-          padding: 16px 20px;
-        }
-        
-        .detail-row {
-          display: flex;
-          justify-content: space-between;
-          margin-bottom: 12px;
-        }
-        
-        .detail {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          font-size: 13px;
-          color: #475569;
-        }
-        
-        .detail .label {
-          color: #64748b;
-        }
-        
-        .progress-bar-container {
-          background: #e2e8f0;
-          border-radius: 10px;
-          overflow: hidden;
-          margin: 12px 0;
-        }
-        
-        .progress-bar-container.small {
-          height: 6px;
-        }
-        
-        .progress-bar {
-          background: linear-gradient(90deg, #2d5a2d, #4caf71);
-          height: 100%;
-          border-radius: 10px;
-          transition: width 0.3s ease;
-        }
-        
-        .contract-card-actions {
-          padding: 12px 20px;
-          border-top: 1px solid #e2e8f0;
-          display: flex;
-          gap: 8px;
-          flex-wrap: wrap;
-        }
-        
-        .action-btn {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          padding: 8px 12px;
-          border-radius: 8px;
-          font-size: 12px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.2s ease;
-          border: none;
-        }
-        
-        .action-btn.view {
-          background: #f1f5f9;
-          color: #1e293b;
-        }
-        
-        .action-btn.view:hover {
-          background: #e2e8f0;
-        }
-        
-        .action-btn.accept {
-          background: #e8f5e9;
-          color: #2e7d32;
-        }
-        
-        .action-btn.accept:hover {
-          background: #c8e6c9;
-        }
-        
-        .action-btn.reject {
-          background: #ffebee;
-          color: #c62828;
-        }
-        
-        .action-btn.reject:hover {
-          background: #ffcdd2;
-        }
-        
-        .action-btn.payment {
-          background: #e3f2fd;
-          color: #1565c0;
-        }
-        
-        .action-btn.payment:hover {
-          background: #bbdef5;
-        }
-        
-        .action-btn.delivery {
-          background: #fff8e1;
-          color: #b76e0a;
-        }
-        
-        .action-btn.delivery:hover {
-          background: #ffecb3;
-        }
-        
-        /* Status Badge */
-        .status-badge {
-          display: inline-flex;
-          align-items: center;
-          gap: 4px;
-          padding: 4px 8px;
-          border-radius: 20px;
-          font-size: 12px;
-          font-weight: 600;
-        }
-        
-        /* Modal Styles */
-        .modal-overlay {
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: rgba(0,0,0,0.5);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          z-index: 1000;
-          backdrop-filter: blur(4px);
-          padding: 16px;
-        }
-        
-        .modal-card {
-          background: white;
-          border-radius: 24px;
-          width: 90%;
-          max-width: 600px;
-          max-height: 90vh;
-          overflow-y: auto;
-          box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
-        }
-        
-        .modal-card.contract-modal,
-        .modal-card.payment-modal,
-        .modal-card.delivery-modal,
-        .modal-card.contract-details-modal {
-          max-width: 800px;
-        }
-        
-        .modal-head {
-          padding: 24px;
-          border-bottom: 1px solid #e2e8f0;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          position: sticky;
-          top: 0;
-          background: white;
-          z-index: 10;
-        }
-        
-        .modal-head h2 {
-          font-size: 20px;
-          font-weight: 700;
-          color: #0f172a;
-          margin: 0;
-        }
-        
-        .modal-close {
-          background: #f1f5f9;
-          border: none;
-          width: 36px;
-          height: 36px;
-          border-radius: 10px;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: #64748b;
-          transition: all 0.2s ease;
-        }
-        
-        .modal-close:hover {
-          background: #fee2e2;
-          color: #b91c1c;
-        }
-        
-        .modal-body {
-          padding: 24px;
-        }
-        
-        .modal-tabs {
-          display: flex;
-          border-bottom: 1px solid #e2e8f0;
-          padding: 0 24px;
-          gap: 8px;
-        }
-        
-        .tab-btn {
-          padding: 12px 20px;
-          background: none;
-          border: none;
-          font-size: 14px;
-          font-weight: 600;
-          color: #64748b;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          transition: all 0.2s ease;
-          border-bottom: 2px solid transparent;
-        }
-        
-        .tab-btn.active {
-          color: #2d5a2d;
-          border-bottom-color: #2d5a2d;
-        }
-        
-        /* Form Styles */
-        .form-group {
-          margin-bottom: 20px;
-        }
-        
-        .form-group label {
-          display: block;
-          font-size: 13px;
-          font-weight: 600;
-          color: #1e293b;
-          margin-bottom: 6px;
-        }
-        
-        .form-row {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 16px;
-        }
-        
-        .form-input {
-          width: 100%;
-          padding: 10px 14px;
-          border: 1.5px solid #e2e8f0;
-          border-radius: 10px;
-          font-size: 14px;
-          font-family: inherit;
-          transition: all 0.2s ease;
-        }
-        
-        .form-input:focus {
-          outline: none;
-          border-color: #2d5a2d;
-          box-shadow: 0 0 0 3px rgba(45,90,45,0.1);
-        }
-        
-        textarea.form-input {
-          resize: vertical;
-          font-family: inherit;
-        }
-        
-        .radio-group {
-          display: flex;
-          gap: 20px;
-        }
-        
-        .radio-label {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          cursor: pointer;
-          font-size: 14px;
-        }
-        
-        .form-hint {
-          display: block;
-          font-size: 12px;
-          color: #64748b;
-          margin-top: 4px;
-        }
-        
-        .btn-submit {
-          width: 100%;
-          padding: 12px;
-          background: linear-gradient(135deg, #1e3c1e 0%, #2d5a2d 100%);
-          color: white;
-          border: none;
-          border-radius: 10px;
-          font-size: 14px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.2s ease;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 8px;
-        }
-        
-        .btn-submit:hover:not(:disabled) {
-          transform: translateY(-2px);
-          box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
-        }
-        
-        .btn-submit:disabled {
-          opacity: 0.6;
-          cursor: not-allowed;
-        }
-        
-        /* Search Select */
-        .search-select-wrapper {
-          position: relative;
-        }
-        
-        .search-select-dropdown {
-          position: absolute;
-          top: 100%;
-          left: 0;
-          right: 0;
-          background: white;
-          border: 1px solid #e2e8f0;
-          border-radius: 10px;
-          max-height: 200px;
-          overflow-y: auto;
-          z-index: 10;
-          box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1);
-        }
-        
-        .search-option {
-          padding: 10px 14px;
-          cursor: pointer;
-          transition: background 0.2s ease;
-        }
-        
-        .search-option:hover {
-          background: #f8fafc;
-        }
-        
-        .search-option.selected {
-          background: #e8f5e9;
-        }
-        
-        .option-name {
-          font-weight: 500;
-          color: #1e293b;
-        }
-        
-        .option-detail {
-          font-size: 12px;
-          color: #64748b;
-          display: flex;
-          align-items: center;
-          gap: 4px;
-          margin-top: 2px;
-        }
-        
-        /* Payment Methods */
-        .payment-methods {
-          display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          gap: 12px;
-        }
-        
-        .payment-method {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 8px;
-          padding: 16px;
-          border: 2px solid #e2e8f0;
-          border-radius: 12px;
-          cursor: pointer;
-          transition: all 0.2s ease;
-          text-align: center;
-        }
-        
-        .payment-method input {
-          display: none;
-        }
-        
-        .payment-method.active {
-          border-color: #2d5a2d;
-          background: #e8f5e9;
-        }
-        
-        .payment-summary {
-          background: #f8fafc;
-          border-radius: 12px;
-          padding: 16px;
-          margin-bottom: 20px;
-        }
-        
-        .summary-item {
-          display: flex;
-          justify-content: space-between;
-          padding: 8px 0;
-        }
-        
-        .summary-item.highlight {
-          font-weight: 700;
-          color: #2d5a2d;
-          border-top: 1px solid #e2e8f0;
-          margin-top: 8px;
-          padding-top: 12px;
-        }
-        
-        .payment-status {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 12px;
-          padding: 12px;
-          border-radius: 10px;
-          margin-bottom: 16px;
-        }
-        
-        .payment-status.processing {
-          background: #fff8e1;
-          color: #b76e0a;
-        }
-        
-        .payment-status.pending {
-          background: #e3f2fd;
-          color: #1565c0;
-        }
-        
-        /* Contract Details */
-        .details-section {
-          margin-bottom: 24px;
-        }
-        
-        .details-section h3 {
-          font-size: 16px;
-          font-weight: 600;
-          color: #0f172a;
-          margin: 0 0 16px 0;
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        }
-        
-        .parties-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 16px;
-        }
-        
-        .party-card {
-          background: #f8fafc;
-          border-radius: 12px;
-          padding: 16px;
-        }
-        
-        .party-header {
-          display: flex;
-          gap: 12px;
-          align-items: center;
-          margin-bottom: 12px;
-        }
-        
-        .party-avatar {
-          width: 40px;
-          height: 40px;
-          border-radius: 10px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-        
-        .party-role {
-          font-size: 11px;
-          color: #64748b;
-          text-transform: uppercase;
-        }
-        
-        .party-name {
-          font-size: 14px;
-          font-weight: 600;
-          color: #0f172a;
-        }
-        
-        .party-info {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-          font-size: 12px;
-          color: #475569;
-        }
-        
-        .party-info svg {
-          margin-right: 4px;
-        }
-        
-        .party-status {
-          margin-top: 12px;
-          padding-top: 12px;
-          border-top: 1px solid #e2e8f0;
-          font-size: 12px;
-        }
-        
-        .details-grid {
-          display: grid;
-          grid-template-columns: repeat(2, 1fr);
-          gap: 12px;
-        }
-        
-        .detail-item {
-          display: flex;
-          justify-content: space-between;
-          padding: 8px 0;
-          border-bottom: 1px solid #f1f5f9;
-        }
-        
-        .detail-label {
-          color: #64748b;
-          font-size: 13px;
-        }
-        
-        .detail-value {
-          font-weight: 500;
-          color: #1e293b;
-        }
-        
-        .deliver-card {
-          background: #f8fafc;
-          border-radius: 12px;
-          padding: 12px;
-        }
-        
-        .deliver-info {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          flex-wrap: wrap;
-        }
-        
-        .details-actions {
-          display: flex;
-          gap: 12px;
-          margin-top: 24px;
-          padding-top: 24px;
-          border-top: 1px solid #e2e8f0;
-        }
-        
-        .details-actions .action-btn {
-          flex: 1;
-          justify-content: center;
-          padding: 12px;
-        }
-        
-        /* Payments List */
-        .payments-list {
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
-        }
-        
-        .payment-item {
-          background: #f8fafc;
-          border-radius: 12px;
-          padding: 16px;
-        }
-        
-        .payment-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 12px;
-        }
-        
-        .payment-amount {
-          font-size: 18px;
-          font-weight: 700;
-          color: #0f172a;
-        }
-        
-        .payment-details {
-          display: flex;
-          gap: 16px;
-          margin-bottom: 8px;
-          font-size: 12px;
-          color: #64748b;
-        }
-        
-        .payment-method {
-          display: flex;
-          align-items: center;
-          gap: 4px;
-        }
-        
-        .payment-ref {
-          display: flex;
-          align-items: center;
-          gap: 4px;
-        }
-        
-        .payment-date {
-          display: flex;
-          align-items: center;
-          gap: 4px;
-        }
-        
-        .payment-notes {
-          font-size: 12px;
-          color: #475569;
-          margin-top: 8px;
-          padding-top: 8px;
-          border-top: 1px solid #e2e8f0;
-        }
-        
-        /* Statistics Section */
-        .statistics-section {
-          display: flex;
-          flex-direction: column;
-          gap: 24px;
-        }
-        
-        .stats-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-          gap: 16px;
-        }
-        
-        .progress-section {
-          margin-top: 16px;
-        }
-        
-        .progress-label {
-          display: flex;
-          justify-content: space-between;
-          margin-bottom: 8px;
-          font-size: 13px;
-          color: #475569;
-        }
-        
-        .due-date-info {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          padding: 12px;
-          background: #fff8e1;
-          border-radius: 10px;
-          font-size: 13px;
-          color: #b76e0a;
-        }
-          /* Farmer Read-only Card */
-.farmer-readonly-card {
-  background: #f8fafc;
-  border: 1.5px solid #e2e8f0;
-  border-radius: 10px;
-  padding: 12px 14px;
-}
+                @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+                
+                .contracts-container {
+                font-family: 'Inter', sans-serif;
+                background-color: #f8fafc;
+                min-height: 100vh;
+                padding: 24px;
+                }
+                
+                /* Header */
+                .page-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 24px;
+                flex-wrap: wrap;
+                gap: 16px;
+                }
+                
+                .header-left h1 {
+                font-size: 28px;
+                font-weight: 700;
+                color: #0f172a;
+                margin: 0 0 4px 0;
+                }
+                
+                .header-left p {
+                font-size: 14px;
+                color: #64748b;
+                margin: 0;
+                }
+                
+                .create-btn {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                padding: 12px 24px;
+                background: linear-gradient(135deg, #1e3c1e 0%, #2d5a2d 100%);
+                color: white;
+                border: none;
+                border-radius: 12px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                }
+                
+                .create-btn:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 10px 20px rgba(45, 90, 45, 0.2);
+                }
+                
+                /* Stats Grid */
+                .stats-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 16px;
+                margin-bottom: 24px;
+                }
+                
+                .stat-card {
+                background: white;
+                border-radius: 16px;
+                padding: 16px 20px;
+                display: flex;
+                align-items: center;
+                gap: 16px;
+                box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+                }
 
-.farmer-info {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
+                /* Additional status styles */
+                .status-badge.status-pending_action {
+                    background: #fff8e1;
+                    color: #b76e0a;
+                }
 
-.farmer-icon {
-  color: #1565c0;
-}
+                .status-badge.status-awaiting_confirmation {
+                    background: #e3f2fd;
+                    color: #1565c0;
+                }
 
-.farmer-details {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
+                .status-badge.status-active {
+                    background: #e8f5e9;
+                    color: #2e7d32;
+                }
 
-.farmer-name {
-  font-weight: 600;
-  color: #1e293b;
-}
+                .waiting-badge {
+                    display: inline-block;
+                    margin-left: 8px;
+                    padding: 2px 6px;
+                    background: #e3f2fd;
+                    color: #1565c0;
+                    border-radius: 4px;
+                    font-size: 10px;
+                    font-weight: 500;
+                }
+                
+                .stat-icon {
+                width: 48px;
+                height: 48px;
+                border-radius: 12px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                }
+                
+                .stat-info {
+                flex: 1;
+                }
+                
+                .stat-value {
+                font-size: 24px;
+                font-weight: 700;
+                color: #0f172a;
+                }
+                
+                .stat-label {
+                font-size: 13px;
+                color: #64748b;
+                }
+                
+                /* Filter Bar */
+                .filter-bar {
+                background: white;
+                border-radius: 16px;
+                padding: 16px 20px;
+                margin-bottom: 24px;
+                display: flex;
+                gap: 16px;
+                flex-wrap: wrap;
+                align-items: center;
+                box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+                }
+                
+                .search-wrapper {
+                flex: 1;
+                min-width: 250px;
+                position: relative;
+                }
+                
+                .search-input {
+                width: 100%;
+                padding: 10px 16px;
+                padding-left: 40px;
+                border: 1px solid #e2e8f0;
+                border-radius: 10px;
+                font-size: 14px;
+                }
+                
+                .search-icon {
+                position: absolute;
+                left: 12px;
+                top: 50%;
+                transform: translateY(-50%);
+                color: #94a3b8;
+                }
+                
+                .status-filter {
+                padding: 10px 16px;
+                border: 1px solid #e2e8f0;
+                border-radius: 10px;
+                font-size: 14px;
+                min-width: 150px;
+                }
 
-.farmer-phone {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 12px;
-  color: #64748b;
-}
-        
-        /* Loading Spinner */
-        .loading-spinner {
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          padding: 60px;
-        }
-        
-        .spinner {
-          width: 40px;
-          height: 40px;
-          border: 3px solid #e2e8f0;
-          border-top-color: #2d5a2d;
-          border-radius: 50%;
-          animation: spin 1s linear infinite;
-        }
-        
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
-        
-        .spin-icon {
-          animation: spin 1s linear infinite;
-        }
-        
-        .empty-state {
-          text-align: center;
-          padding: 60px;
-          color: #94a3b8;
-        }
-        
-        .empty-state svg {
-          margin-bottom: 16px;
-        }
-        
-        /* Pagination */
-        .pagination-container {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 20px;
-          background: white;
-          border-radius: 16px;
-          margin-top: 24px;
-          flex-wrap: wrap;
-          gap: 16px;
-        }
-        
-        .pagination-info {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          font-size: 14px;
-          color: #64748b;
-        }
-        
-        .page-size-select {
-          padding: 6px 10px;
-          border: 1px solid #e2e8f0;
-          border-radius: 8px;
-          cursor: pointer;
-        }
-        
-        .pagination-controls {
-          display: flex;
-          gap: 6px;
-        }
-        
-        .pagination-btn {
-          min-width: 36px;
-          height: 36px;
-          border: 1px solid #e2e8f0;
-          background: white;
-          border-radius: 8px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
-          transition: all 0.2s ease;
-        }
-        
-        .pagination-btn:hover:not(:disabled) {
-          background: #f8fafc;
-          border-color: #2d5a2d;
-          color: #2d5a2d;
-        }
-        
-        .pagination-btn.active {
-          background: #2d5a2d;
-          border-color: #2d5a2d;
-          color: white;
-        }
-        
-        .pagination-btn:disabled {
-          opacity: 0.5;
-          cursor: not-allowed;
-        }
+                /* Filter Info Styles */
+                .filter-info {
+                    margin-bottom: 20px;
+                    padding: 12px 16px;
+                    background: #f8fafc;
+                    border-radius: 12px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    flex-wrap: wrap;
+                    gap: 12px;
+                }
 
-        /* Farmer Info Card */
-.farmer-info-card {
-  background: linear-gradient(135deg, #e3f2fd 0%, #bbdef5 100%);
-  border-radius: 12px;
-  padding: 16px;
-  margin-bottom: 20px;
-}
+                .filter-badge {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 8px;
+                    padding: 6px 12px;
+                    background: white;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 8px;
+                    font-size: 13px;
+                    color: #1e293b;
+                }
 
-.farmer-info-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 600;
-  color: #1565c0;
-  margin-bottom: 12px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid rgba(21, 101, 192, 0.2);
-}
+                .clear-filter {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 4px;
+                    padding: 4px 8px;
+                    background: #fee2e2;
+                    border: none;
+                    border-radius: 6px;
+                    color: #c62828;
+                    cursor: pointer;
+                    font-size: 11px;
+                    transition: all 0.2s ease;
+                }
 
-.farmer-info-details {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
+                .clear-filter:hover {
+                    background: #ffcdd2;
+                }
 
-.farmer-info-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 13px;
-}
+                .clear-filters-btn {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 8px;
+                    padding: 10px 20px;
+                    background: #fee2e2;
+                    color: #c62828;
+                    border: none;
+                    border-radius: 10px;
+                    cursor: pointer;
+                    font-weight: 500;
+                    margin-top: 16px;
+                    transition: all 0.2s ease;
+                }
 
-.farmer-label {
-  min-width: 60px;
-  color: #1565c0;
-  font-weight: 500;
-}
+                .clear-filters-btn:hover {
+                    background: #ffcdd2;
+                    transform: translateY(-1px);
+                }
+                
+                /* Contracts Grid */
+                .contracts-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+                gap: 20px;
+                }
+                
+                .contract-card {
+                background: white;
+                border-radius: 16px;
+                overflow: hidden;
+                box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+                transition: all 0.3s ease;
+                }
+                
+                .contract-card:hover {
+                transform: translateY(-4px);
+                box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
+                }
+                
+                .contract-card-header {
+                padding: 16px 20px;
+                background: #f8fafc;
+                border-bottom: 1px solid #e2e8f0;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                }
+                
+                .contract-info h3 {
+                font-size: 16px;
+                font-weight: 600;
+                color: #0f172a;
+                margin: 0 0 4px 0;
+                }
+                
+                .contract-id {
+                font-size: 12px;
+                color: #64748b;
+                }
+                
+                .contract-card-details {
+                padding: 16px 20px;
+                }
+                
+                .detail-row {
+                display: flex;
+                justify-content: space-between;
+                margin-bottom: 12px;
+                }
+                
+                .detail {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                font-size: 13px;
+                color: #475569;
+                }
+                
+                .detail .label {
+                color: #64748b;
+                }
+                
+                .progress-bar-container {
+                background: #e2e8f0;
+                border-radius: 10px;
+                overflow: hidden;
+                margin: 12px 0;
+                }
+                
+                .progress-bar-container.small {
+                height: 6px;
+                }
+                
+                .progress-bar {
+                background: linear-gradient(90deg, #2d5a2d, #4caf71);
+                height: 100%;
+                border-radius: 10px;
+                transition: width 0.3s ease;
+                }
+                
+                .contract-card-actions {
+                padding: 12px 20px;
+                border-top: 1px solid #e2e8f0;
+                display: flex;
+                gap: 8px;
+                flex-wrap: wrap;
+                }
+                
+                .action-btn {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                padding: 8px 12px;
+                border-radius: 8px;
+                font-size: 12px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                border: none;
+                }
+                
+                .action-btn.view {
+                background: #f1f5f9;
+                color: #1e293b;
+                }
+                
+                .action-btn.view:hover {
+                background: #e2e8f0;
+                }
+                
+                .action-btn.accept {
+                background: #e8f5e9;
+                color: #2e7d32;
+                }
+                
+                .action-btn.accept:hover {
+                background: #c8e6c9;
+                }
+                
+                .action-btn.reject {
+                background: #ffebee;
+                color: #c62828;
+                }
+                
+                .action-btn.reject:hover {
+                background: #ffcdd2;
+                }
+                
+                .action-btn.payment {
+                background: #e3f2fd;
+                color: #1565c0;
+                }
+                
+                .action-btn.payment:hover {
+                background: #bbdef5;
+                }
+                
+                .action-btn.delivery {
+                background: #fff8e1;
+                color: #b76e0a;
+                }
+                
+                .action-btn.delivery:hover {
+                background: #ffecb3;
+                }
+                
+                /* Status Badge */
+                .status-badge {
+                display: inline-flex;
+                align-items: center;
+                gap: 4px;
+                padding: 4px 8px;
+                border-radius: 20px;
+                font-size: 12px;
+                font-weight: 600;
+                }
+                
+                /* Modal Styles */
+                .modal-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0,0,0,0.5);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 1000;
+                backdrop-filter: blur(4px);
+                padding: 16px;
+                }
+                
+                .modal-card {
+                background: white;
+                border-radius: 24px;
+                width: 90%;
+                max-width: 600px;
+                max-height: 90vh;
+                overflow-y: auto;
+                box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+                }
+                
+                .modal-card.contract-modal,
+                .modal-card.payment-modal,
+                .modal-card.delivery-modal,
+                .modal-card.contract-details-modal {
+                max-width: 800px;
+                }
+                
+                .modal-head {
+                padding: 24px;
+                border-bottom: 1px solid #e2e8f0;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                position: sticky;
+                top: 0;
+                background: white;
+                z-index: 10;
+                }
+                
+                .modal-head h2 {
+                font-size: 20px;
+                font-weight: 700;
+                color: #0f172a;
+                margin: 0;
+                }
+                
+                .modal-close {
+                background: #f1f5f9;
+                border: none;
+                width: 36px;
+                height: 36px;
+                border-radius: 10px;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: #64748b;
+                transition: all 0.2s ease;
+                }
+                
+                .modal-close:hover {
+                background: #fee2e2;
+                color: #b91c1c;
+                }
+                
+                .modal-body {
+                padding: 24px;
+                }
+                
+                .modal-tabs {
+                display: flex;
+                border-bottom: 1px solid #e2e8f0;
+                padding: 0 24px;
+                gap: 8px;
+                }
+                
+                .tab-btn {
+                padding: 12px 20px;
+                background: none;
+                border: none;
+                font-size: 14px;
+                font-weight: 600;
+                color: #64748b;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                transition: all 0.2s ease;
+                border-bottom: 2px solid transparent;
+                }
+                
+                .tab-btn.active {
+                color: #2d5a2d;
+                border-bottom-color: #2d5a2d;
+                }
+                
+                /* Form Styles */
+                .form-group {
+                margin-bottom: 20px;
+                }
+                
+                .form-group label {
+                display: block;
+                font-size: 13px;
+                font-weight: 600;
+                color: #1e293b;
+                margin-bottom: 6px;
+                }
+                
+                .form-row {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 16px;
+                }
+                
+                .form-input {
+                width: 100%;
+                padding: 10px 14px;
+                border: 1.5px solid #e2e8f0;
+                border-radius: 10px;
+                font-size: 14px;
+                font-family: inherit;
+                transition: all 0.2s ease;
+                }
+                
+                .form-input:focus {
+                outline: none;
+                border-color: #2d5a2d;
+                box-shadow: 0 0 0 3px rgba(45,90,45,0.1);
+                }
+                
+                textarea.form-input {
+                resize: vertical;
+                font-family: inherit;
+                }
+                
+                .radio-group {
+                display: flex;
+                gap: 20px;
+                }
+                
+                .radio-label {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                cursor: pointer;
+                font-size: 14px;
+                }
+                
+                .form-hint {
+                display: block;
+                font-size: 12px;
+                color: #64748b;
+                margin-top: 4px;
+                }
+                
+                .btn-submit {
+                width: 100%;
+                padding: 12px;
+                background: linear-gradient(135deg, #1e3c1e 0%, #2d5a2d 100%);
+                color: white;
+                border: none;
+                border-radius: 10px;
+                font-size: 14px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 8px;
+                }
+                
+                .btn-submit:hover:not(:disabled) {
+                transform: translateY(-2px);
+                box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+                }
+                
+                .btn-submit:disabled {
+                opacity: 0.6;
+                cursor: not-allowed;
+                }
+                
+                /* Search Select */
+                .search-select-wrapper {
+                position: relative;
+                }
+                
+                .search-select-dropdown {
+                position: absolute;
+                top: 100%;
+                left: 0;
+                right: 0;
+                background: white;
+                border: 1px solid #e2e8f0;
+                border-radius: 10px;
+                max-height: 200px;
+                overflow-y: auto;
+                z-index: 10;
+                box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1);
+                }
+                
+                .search-option {
+                padding: 10px 14px;
+                cursor: pointer;
+                transition: background 0.2s ease;
+                }
+                
+                .search-option:hover {
+                background: #f8fafc;
+                }
+                
+                .search-option.selected {
+                background: #e8f5e9;
+                }
+                
+                .option-name {
+                font-weight: 500;
+                color: #1e293b;
+                }
+                
+                .option-detail {
+                font-size: 12px;
+                color: #64748b;
+                display: flex;
+                align-items: center;
+                gap: 4px;
+                margin-top: 2px;
+                }
+                
+                /* Payment Methods */
+                .payment-methods {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 12px;
+                }
+                
+                .payment-method {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 8px;
+                padding: 16px;
+                border: 2px solid #e2e8f0;
+                border-radius: 12px;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                text-align: center;
+                }
+                
+                .payment-method input {
+                display: none;
+                }
+                
+                .payment-method.active {
+                border-color: #2d5a2d;
+                background: #e8f5e9;
+                }
+                
+                .payment-summary {
+                background: #f8fafc;
+                border-radius: 12px;
+                padding: 16px;
+                margin-bottom: 20px;
+                }
+                
+                .summary-item {
+                display: flex;
+                justify-content: space-between;
+                padding: 8px 0;
+                }
+                
+                .summary-item.highlight {
+                font-weight: 700;
+                color: #2d5a2d;
+                border-top: 1px solid #e2e8f0;
+                margin-top: 8px;
+                padding-top: 12px;
+                }
+                
+                .payment-status {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 12px;
+                padding: 12px;
+                border-radius: 10px;
+                margin-bottom: 16px;
+                }
+                
+                .payment-status.processing {
+                background: #fff8e1;
+                color: #b76e0a;
+                }
+                
+                .payment-status.pending {
+                background: #e3f2fd;
+                color: #1565c0;
+                }
+                
+                /* Contract Details */
+                .details-section {
+                margin-bottom: 24px;
+                }
+                
+                .details-section h3 {
+                font-size: 16px;
+                font-weight: 600;
+                color: #0f172a;
+                margin: 0 0 16px 0;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                }
+                
+                .parties-grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 16px;
+                }
+                
+                .party-card {
+                background: #f8fafc;
+                border-radius: 12px;
+                padding: 16px;
+                }
+                
+                .party-header {
+                display: flex;
+                gap: 12px;
+                align-items: center;
+                margin-bottom: 12px;
+                }
+                
+                .party-avatar {
+                width: 40px;
+                height: 40px;
+                border-radius: 10px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                }
+                
+                .party-role {
+                font-size: 11px;
+                color: #64748b;
+                text-transform: uppercase;
+                }
+                
+                .party-name {
+                font-size: 14px;
+                font-weight: 600;
+                color: #0f172a;
+                }
+                
+                .party-info {
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+                font-size: 12px;
+                color: #475569;
+                }
+                
+                .party-info svg {
+                margin-right: 4px;
+                }
+                
+                .party-status {
+                margin-top: 12px;
+                padding-top: 12px;
+                border-top: 1px solid #e2e8f0;
+                font-size: 12px;
+                }
+                
+                .details-grid {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 12px;
+                }
+                
+                .detail-item {
+                display: flex;
+                justify-content: space-between;
+                padding: 8px 0;
+                border-bottom: 1px solid #f1f5f9;
+                }
+                
+                .detail-label {
+                color: #64748b;
+                font-size: 13px;
+                }
+                
+                .detail-value {
+                font-weight: 500;
+                color: #1e293b;
+                }
+                
+                .deliver-card {
+                background: #f8fafc;
+                border-radius: 12px;
+                padding: 12px;
+                }
+                
+                .deliver-info {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                flex-wrap: wrap;
+                }
+                
+                .details-actions {
+                display: flex;
+                gap: 12px;
+                margin-top: 24px;
+                padding-top: 24px;
+                border-top: 1px solid #e2e8f0;
+                }
+                
+                .details-actions .action-btn {
+                flex: 1;
+                justify-content: center;
+                padding: 12px;
+                }
+                
+                /* Payments List */
+                .payments-list {
+                display: flex;
+                flex-direction: column;
+                gap: 16px;
+                }
+                
+                .payment-item {
+                background: #f8fafc;
+                border-radius: 12px;
+                padding: 16px;
+                }
+                
+                .payment-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 12px;
+                }
+                
+                .payment-amount {
+                font-size: 18px;
+                font-weight: 700;
+                color: #0f172a;
+                }
+                
+                .payment-details {
+                display: flex;
+                gap: 16px;
+                margin-bottom: 8px;
+                font-size: 12px;
+                color: #64748b;
+                }
+                
+                .payment-method {
+                display: flex;
+                align-items: center;
+                gap: 4px;
+                }
+                
+                .payment-ref {
+                display: flex;
+                align-items: center;
+                gap: 4px;
+                }
+                
+                .payment-date {
+                display: flex;
+                align-items: center;
+                gap: 4px;
+                }
+                
+                .payment-notes {
+                font-size: 12px;
+                color: #475569;
+                margin-top: 8px;
+                padding-top: 8px;
+                border-top: 1px solid #e2e8f0;
+                }
+                
+                /* Statistics Section */
+                .statistics-section {
+                display: flex;
+                flex-direction: column;
+                gap: 24px;
+                }
+                
+                .stats-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 16px;
+                }
+                
+                .progress-section {
+                margin-top: 16px;
+                }
+                
+                .progress-label {
+                display: flex;
+                justify-content: space-between;
+                margin-bottom: 8px;
+                font-size: 13px;
+                color: #475569;
+                }
+                
+                .due-date-info {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                padding: 12px;
+                background: #fff8e1;
+                border-radius: 10px;
+                font-size: 13px;
+                color: #b76e0a;
+                }
+                /* Farmer Read-only Card */
+                .farmer-readonly-card {
+                background: #f8fafc;
+                border: 1.5px solid #e2e8f0;
+                border-radius: 10px;
+                padding: 12px 14px;
+                }
 
-.farmer-value {
-  color: #1e293b;
-  font-weight: 500;
-}
+                .farmer-info {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                }
 
-/* Delivery Location Display */
-.delivery-location-display {
-  background: #f8fafc;
-  border-radius: 10px;
-  border: 1.5px solid #e2e8f0;
-  overflow: hidden;
-}
+                .farmer-icon {
+                color: #1565c0;
+                }
 
-.current-location {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 14px;
-  background: white;
-  border-radius: 8px;
-}
+                .farmer-details {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+                }
 
-.current-location span {
-  flex: 1;
-  color: #1e293b;
-  font-size: 14px;
-}
+                .farmer-name {
+                font-weight: 600;
+                color: #1e293b;
+                }
 
-.change-location-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  background: #f1f5f9;
-  border: none;
-  border-radius: 6px;
-  font-size: 12px;
-  color: #64748b;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
+                .farmer-phone {
+                display: inline-flex;
+                align-items: center;
+                gap: 4px;
+                font-size: 12px;
+                color: #64748b;
+                }
+                
+                /* Loading Spinner */
+                .loading-spinner {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                padding: 60px;
+                }
+                
+                .spinner {
+                width: 40px;
+                height: 40px;
+                border: 3px solid #e2e8f0;
+                border-top-color: #2d5a2d;
+                border-radius: 50%;
+                animation: spin 1s linear infinite;
+                }
+                
+                @keyframes spin {
+                to { transform: rotate(360deg); }
+                }
+                
+                .spin-icon {
+                animation: spin 1s linear infinite;
+                }
+                
+                .empty-state {
+                text-align: center;
+                padding: 60px;
+                color: #94a3b8;
+                }
+                
+                .empty-state svg {
+                margin-bottom: 16px;
+                }
+                
+                /* Pagination */
+                .pagination-container {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 20px;
+                background: white;
+                border-radius: 16px;
+                margin-top: 24px;
+                flex-wrap: wrap;
+                gap: 16px;
+                }
+                
+                .pagination-info {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                font-size: 14px;
+                color: #64748b;
+                }
+                
+                .page-size-select {
+                padding: 6px 10px;
+                border: 1px solid #e2e8f0;
+                border-radius: 8px;
+                cursor: pointer;
+                }
+                
+                .pagination-controls {
+                display: flex;
+                gap: 6px;
+                }
+                
+                .pagination-btn {
+                min-width: 36px;
+                height: 36px;
+                border: 1px solid #e2e8f0;
+                background: white;
+                border-radius: 8px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                }
+                
+                .pagination-btn:hover:not(:disabled) {
+                background: #f8fafc;
+                border-color: #2d5a2d;
+                color: #2d5a2d;
+                }
+                
+                .pagination-btn.active {
+                background: #2d5a2d;
+                border-color: #2d5a2d;
+                color: white;
+                }
+                
+                .pagination-btn:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+                }
 
-.change-location-btn:hover {
-  background: #e2e8f0;
-  color: #2d5a2d;
-}
+                /* Farmer Info Card */
+                .farmer-info-card {
+                background: linear-gradient(135deg, #e3f2fd 0%, #bbdef5 100%);
+                border-radius: 12px;
+                padding: 16px;
+                margin-bottom: 20px;
+                }
 
-/* Location Selector Wrapper */
-.location-selector-wrapper {
-  position: relative;
-}
+                .farmer-info-header {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                font-weight: 600;
+                color: #1565c0;
+                margin-bottom: 12px;
+                padding-bottom: 8px;
+                border-bottom: 1px solid rgba(21, 101, 192, 0.2);
+                }
 
-.cancel-location-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 8px;
-  padding: 6px 12px;
-  background: #fee2e2;
-  border: none;
-  border-radius: 6px;
-  font-size: 12px;
-  color: #c62828;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
+                .farmer-info-details {
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+                }
 
-.cancel-location-btn:hover {
-  background: #ffcdd2;
-}
+                .farmer-info-row {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                font-size: 13px;
+                }
 
-/* Use Location Selector Button */
-.use-location-selector-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 8px;
-  padding: 6px 12px;
-  background: #e8f5e9;
-  border: none;
-  border-radius: 6px;
-  font-size: 12px;
-  color: #2d5a2d;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
+                .farmer-label {
+                min-width: 60px;
+                color: #1565c0;
+                font-weight: 500;
+                }
 
-.use-location-selector-btn:hover {
-  background: #c8e6c9;
-}
+                .farmer-value {
+                color: #1e293b;
+                font-weight: 500;
+                }
 
-/* Form Error */
-.form-error {
-  display: block;
-  font-size: 12px;
-  color: #c62828;
-  margin-top: 4px;
-}
+                /* Delivery Location Display */
+                .delivery-location-display {
+                background: #f8fafc;
+                border-radius: 10px;
+                border: 1.5px solid #e2e8f0;
+                overflow: hidden;
+                }
 
-/* Location Hint */
-.location-hint {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 8px;
-  padding: 6px 10px;
-  background: #e8f5e9;
-  border-radius: 6px;
-  font-size: 11px;
-  color: #2e7d32;
-}
+                .current-location {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                padding: 12px 14px;
+                background: white;
+                border-radius: 8px;
+                }
 
-/* Input Error State */
-.form-input.error {
-  border-color: #c62828;
-}
+                .current-location span {
+                flex: 1;
+                color: #1e293b;
+                font-size: 14px;
+                }
 
-.form-input.error:focus {
-  border-color: #c62828;
-  box-shadow: 0 0 0 3px rgba(198, 40, 40, 0.1);
-}
-        
-        /* Total Amount Display */
-.total-amount-display {
-  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
-  padding: 16px;
-  border-radius: 12px;
-  margin-bottom: 20px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
+                .change-location-btn {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                padding: 6px 12px;
+                background: #f1f5f9;
+                border: none;
+                border-radius: 6px;
+                font-size: 12px;
+                color: #64748b;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                }
 
-.total-amount-label {
-  font-size: 14px;
-  font-weight: 600;
-  color: #1e3c1e;
-}
+                .change-location-btn:hover {
+                background: #e2e8f0;
+                color: #2d5a2d;
+                }
 
-.total-amount-value {
-  font-size: 24px;
-  font-weight: 700;
-  color: #2d5a2d;
-}
+                /* Location Selector Wrapper */
+                .location-selector-wrapper {
+                position: relative;
+                }
 
-/* Selected Info */
-.selected-info {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 12px;
-  background: #e8f5e9;
-  border-radius: 8px;
-  margin-top: 8px;
-  font-size: 13px;
-  color: #2d5a2d;
-}
+                .cancel-location-btn {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                margin-top: 8px;
+                padding: 6px 12px;
+                background: #fee2e2;
+                border: none;
+                border-radius: 6px;
+                font-size: 12px;
+                color: #c62828;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                }
 
-/* Create Options Modal */
-.create-option-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-  border-color: #2d5a2d !important;
-}
+                .cancel-location-btn:hover {
+                background: #ffcdd2;
+                }
 
-/* Form Hint */
-.form-hint {
-  display: block;
-  font-size: 11px;
-  color: #64748b;
-  margin-top: 4px;
-}
-        
-        /* Responsive */
-        @media (max-width: 768px) {
-          .contracts-container {
-            padding: 16px;
-          }
-          
-          .stats-grid {
-            grid-template-columns: repeat(2, 1fr);
-          }
-          
-          .contracts-grid {
-            grid-template-columns: 1fr;
-          }
-          
-          .parties-grid,
-          .details-grid {
-            grid-template-columns: 1fr;
-          }
-          
-          .form-row {
-            grid-template-columns: 1fr;
-          }
-          
-          .payment-methods {
-            grid-template-columns: 1fr;
-          }
-          
-          .filter-bar {
-            flex-direction: column;
-          }
-          
-          .search-wrapper,
-          .status-filter {
-            width: 100%;
-          }
-          
-          .pagination-container {
-            flex-direction: column;
-            align-items: flex-start;
-          }
-          
-          .pagination-controls {
-            width: 100%;
-            justify-content: center;
-          }
-        }
-      `}</style>
+                /* Use Location Selector Button */
+                .use-location-selector-btn {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                margin-top: 8px;
+                padding: 6px 12px;
+                background: #e8f5e9;
+                border: none;
+                border-radius: 6px;
+                font-size: 12px;
+                color: #2d5a2d;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                }
+
+                .use-location-selector-btn:hover {
+                background: #c8e6c9;
+                }
+
+                /* Form Error */
+                .form-error {
+                display: block;
+                font-size: 12px;
+                color: #c62828;
+                margin-top: 4px;
+                }
+
+                /* Location Hint */
+                .location-hint {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                margin-top: 8px;
+                padding: 6px 10px;
+                background: #e8f5e9;
+                border-radius: 6px;
+                font-size: 11px;
+                color: #2e7d32;
+                }
+
+                /* Input Error State */
+                .form-input.error {
+                border-color: #c62828;
+                }
+
+                .form-input.error:focus {
+                border-color: #c62828;
+                box-shadow: 0 0 0 3px rgba(198, 40, 40, 0.1);
+                }
+                        
+                        /* Total Amount Display */
+                .total-amount-display {
+                background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+                padding: 16px;
+                border-radius: 12px;
+                margin-bottom: 20px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                }
+
+                .total-amount-label {
+                font-size: 14px;
+                font-weight: 600;
+                color: #1e3c1e;
+                }
+
+                .total-amount-value {
+                font-size: 24px;
+                font-weight: 700;
+                color: #2d5a2d;
+                }
+
+                /* Selected Info */
+                .selected-info {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                padding: 8px 12px;
+                background: #e8f5e9;
+                border-radius: 8px;
+                margin-top: 8px;
+                font-size: 13px;
+                color: #2d5a2d;
+                }
+
+                /* Create Options Modal */
+                .create-option-btn:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+                border-color: #2d5a2d !important;
+                }
+
+                /* Form Hint */
+                .form-hint {
+                display: block;
+                font-size: 11px;
+                color: #64748b;
+                margin-top: 4px;
+                }
+                
+                /* Responsive */
+                @media (max-width: 768px) {
+                .contracts-container {
+                    padding: 16px;
+                }
+                
+                .stats-grid {
+                    grid-template-columns: repeat(2, 1fr);
+                }
+                
+                .contracts-grid {
+                    grid-template-columns: 1fr;
+                }
+                
+                .parties-grid,
+                .details-grid {
+                    grid-template-columns: 1fr;
+                }
+                
+                .form-row {
+                    grid-template-columns: 1fr;
+                }
+                
+                .payment-methods {
+                    grid-template-columns: 1fr;
+                }
+                
+                .filter-bar {
+                    flex-direction: column;
+                }
+                
+                .search-wrapper,
+                .status-filter {
+                    width: 100%;
+                }
+                
+                .pagination-container {
+                    flex-direction: column;
+                    align-items: flex-start;
+                }
+                
+                .pagination-controls {
+                    width: 100%;
+                    justify-content: center;
+                }
+                }
+            `}</style>
 
             <div className="page-header">
                 <div className="header-left">
@@ -3769,23 +4265,24 @@ export default function BuyerContracts() {
                 </div>
                 <div className="stat-card">
                     <div className="stat-icon" style={{ backgroundColor: "#e3f2fd", color: "#1565c0" }}>
-                        <CheckCircle size={24} />
+                        <TrendingUp size={24} />
                     </div>
                     <div className="stat-info">
-                        <div className="stat-value">{stats.accepted}</div>
+                        <div className="stat-value">{stats.active}</div>
                         <div className="stat-label">{t('active_contracts')}</div>
                     </div>
                 </div>
                 <div className="stat-card">
                     <div className="stat-icon" style={{ backgroundColor: "#f3e8ff", color: "#7e22ce" }}>
-                        <DollarSign size={24} />
+                        <Award size={24} />
                     </div>
                     <div className="stat-info">
-                        <div className="stat-value">{stats.paidValue?.toLocaleString()} RWF</div>
-                        <div className="stat-label">{t('total_paid')}</div>
+                        <div className="stat-value">{stats.completed}</div>
+                        <div className="stat-label">{t('completed_contracts')}</div>
                     </div>
                 </div>
             </div>
+
 
             <div className="filter-bar">
                 <div className="search-wrapper">
@@ -3804,9 +4301,10 @@ export default function BuyerContracts() {
                     onChange={(e) => setStatusFilter(e.target.value)}
                 >
                     <option value="">{t('all_statuses')}</option>
-                    <option value="pending">{t('pending')}</option>
-                    <option value="accepted">{t('accepted')}</option>
+                    <option value="pending">{t('pending')} (Waiting for response)</option>
+                    <option value="accepted">{t('active')} (In Progress)</option>
                     <option value="completed">{t('completed')}</option>
+                    <option value="rejected">{t('rejected')}</option>
                     <option value="failed">{t('failed')}</option>
                 </select>
                 <button className="refresh-btn" onClick={fetchContracts}>
@@ -3815,8 +4313,37 @@ export default function BuyerContracts() {
                 </button>
             </div>
 
+
+            {statusFilter && filteredContracts.length > 0 && (
+                <div className="filter-info">
+                    <span className="filter-badge">
+                        {t('showing')}: {filteredContracts.length} {t('contracts')}
+                        {statusFilter === "accepted" && t('active_contracts')}
+                        {statusFilter === "pending" && t('pending_contracts')}
+                        {statusFilter === "completed" && t('completed_contracts')}
+                        {statusFilter === "rejected" && t('rejected_contracts')}
+                        {statusFilter === "failed" && t('failed_contracts')}
+                        <button className="clear-filter" onClick={() => setStatusFilter("")}>
+                            <X size={12} /> {t('clear')}
+                        </button>
+                    </span>
+                </div>
+            )}
+
             {loading ? (
                 <LoadingSpinner />
+            ) : (statusFilter && filteredContracts.length === 0) ? (
+                <div className="empty-state">
+                    <Filter size={48} />
+                    <p>{t('no_contracts_match_filter')}</p>
+                    <button className="clear-filters-btn" onClick={() => {
+                        setStatusFilter("");
+                        setSearchTerm("");
+                    }}>
+                        <X size={14} />
+                        {t('clear_all_filters')}
+                    </button>
+                </div>
             ) : contracts.length === 0 ? (
                 <div className="empty-state">
                     <FileText size={48} />
@@ -3829,7 +4356,7 @@ export default function BuyerContracts() {
             ) : (
                 <>
                     <div className="contracts-grid">
-                        {contracts.map(renderContractCard)}
+                        {(statusFilter ? filteredContracts : contracts).map(renderContractCard)}
                     </div>
 
                     <Pagination
@@ -3841,7 +4368,7 @@ export default function BuyerContracts() {
                             setPageSize(size);
                             setCurrentPage(1);
                         }}
-                        totalItems={totalItems}
+                        totalItems={statusFilter ? filteredContracts.length : totalItems}
                     />
                 </>
             )}

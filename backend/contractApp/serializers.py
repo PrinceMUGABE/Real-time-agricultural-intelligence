@@ -198,6 +198,12 @@ class UpdateContractSerializer(serializers.Serializer):
         return value
 
 
+class UpdateDeliverySerializer(serializers.Serializer):
+    """Serializer for updating delivery details"""
+    delivery_status = serializers.CharField(required=False, allow_blank=True)
+    delivery_date = serializers.DateField(required=False, allow_null=True)
+    delivery_notes = serializers.CharField(required=False, allow_blank=True)
+
 class AddPaymentSerializer(serializers.Serializer):
     """Serializer for adding a payment"""
     amount = serializers.DecimalField(max_digits=14, decimal_places=2)

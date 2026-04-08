@@ -44,4 +44,6 @@ urlpatterns = [
     # ==================== ALERTS ====================
     path('alerts/', views.list_alerts, name='list_alerts'),
     path('alerts/<int:alert_id>/resolve/', views.resolve_alert, name='resolve_alert'),
+    
+    path('public/', views.list_available_stocks, name='public_available_stocks'),
 ]

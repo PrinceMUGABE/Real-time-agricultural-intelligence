@@ -281,9 +281,18 @@ function LocationSelector({ value, onChange, error, t }) {
 }
 
 function StatusBadge({ status, type = "contract" }) {
-    const config = statusColors[status] || statusColors.pending;
+    const { t } = useTranslation();
+
+    // Extended status colors for user-specific statuses
+    const extendedStatusColors = {
+        ...statusColors,
+        pending_action: { bg: "#fff8e1", color: "#b76e0a", icon: Clock },
+        awaiting_confirmation: { bg: "#e3f2fd", color: "#1565c0", icon: ShieldCheck },
+        active: { bg: "#e8f5e9", color: "#2e7d32", icon: TrendingUp }
+    };
+
+    const config = extendedStatusColors[status] || statusColors.pending;
     const Icon = config.icon;
-    const {t} = useTranslation();
 
     const statusLabels = {
         pending: t('pending'),
@@ -291,12 +300,15 @@ function StatusBadge({ status, type = "contract" }) {
         rejected: t('rejected'),
         completed: t('completed'),
         failed: t('failed'),
-        in_progress: t('in_progress')
+        in_progress: t('in_progress'),
+        pending_action: t('pending_your_action'),
+        awaiting_confirmation: t('awaiting_admin_confirmation'),
+        active: t('active')
     };
 
     return (
         <div className="status-badge" style={{ backgroundColor: config.bg, color: config.color }}>
-            <Icon size={12} />
+            {Icon && <Icon size={12} />}
             <span>{statusLabels[status] || status}</span>
         </div>
     );
@@ -1967,6 +1979,8 @@ function ContractDetailsModal({ isOpen, onClose, contract, onUpdate, onPayment, 
 
 // ─── Main Component ──────────────────────────────────────────────────────────
 
+// ─── Main Component ──────────────────────────────────────────────────────────
+
 export default function FarmerContracts() {
     const { t } = useTranslation();
     const navigate = useNavigate();
@@ -1988,6 +2002,7 @@ export default function FarmerContracts() {
     const [showDeliveryModal, setShowDeliveryModal] = useState(false);
     const [showDetailsModal, setShowDetailsModal] = useState(false);
     const [showCreateOptions, setShowCreateOptions] = useState(false);
+    const [filteredContracts, setFilteredContracts] = useState([]);
 
     // Filter state
     const [statusFilter, setStatusFilter] = useState("");
@@ -1995,6 +2010,58 @@ export default function FarmerContracts() {
 
     // Stock data for creating contract from matching
     const [stockData, setStockData] = useState(null);
+
+    // Helper function to determine display status
+    const getDisplayStatus = useCallback((contract, userRole = "farmer") => {
+        const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+        const isBuyer = contract.buyer === currentUser.id;
+        const isFarmer = contract.farmer === currentUser.id;
+
+        // Get user's individual status
+        let userStatus = null;
+        let otherPartyStatus = null;
+
+        if (isBuyer) {
+            userStatus = contract.buyer_status;
+            otherPartyStatus = contract.farmer_status;
+        } else if (isFarmer) {
+            userStatus = contract.farmer_status;
+            otherPartyStatus = contract.buyer_status;
+        }
+
+        // If user rejected the contract
+        if (userStatus === "rejected") {
+            return "rejected";
+        }
+
+        // If user hasn't responded yet and other party hasn't accepted
+        if (userStatus === "pending" && otherPartyStatus !== "accepted") {
+            return "pending";
+        }
+
+        // If user hasn't responded but other party accepted (waiting for user)
+        if (userStatus === "pending" && otherPartyStatus === "accepted") {
+            return "pending_action"; // Special status for waiting
+        }
+
+        // If user accepted but contract not yet admin confirmed
+        if (userStatus === "accepted" && !contract.admin_confirmed) {
+            return "awaiting_confirmation";
+        }
+
+        // If contract is fully paid AND delivery is completed, it should be completed
+        if (contract.is_fully_paid && contract.delivery_status === "completed") {
+            return "completed";
+        }
+
+        // If contract is accepted and admin confirmed
+        if (contract.status === "accepted" && contract.admin_confirmed) {
+            return "active";
+        }
+
+        // Default to contract status
+        return contract.status;
+    }, []);
 
     // API Client
     const apiClient = useMemo(() => {
@@ -2116,6 +2183,7 @@ export default function FarmerContracts() {
         // Check if payment is allowed
         return contract.can_proceed_to_payment && !contract.is_fully_paid;
     };
+
     // Check if coming from market matching
     useEffect(() => {
         if (location.state?.stockData && location.state?.openCreateModal) {
@@ -2134,7 +2202,7 @@ export default function FarmerContracts() {
     // Handle create from crops
     const handleCreateFromCrops = () => {
         setShowCreateOptions(false);
-        navigate('/buyer/stocks'); // Navigate to crops/stocks page
+        navigate('/buyer/stocks');
     };
 
     // Handle create from market matching
@@ -2144,19 +2212,74 @@ export default function FarmerContracts() {
     };
 
     // Fetch contracts
+    // Helper function to filter contracts based on selected status and search term
+    const filterContracts = useCallback((contractsList, statusValue, searchValue) => {
+        let filtered = [...contractsList];
+
+        // Apply status filter using display_status
+        if (statusValue) {
+            filtered = filtered.filter(contract => {
+                // Map filter values to display_status values
+                let filterStatus = statusValue;
+
+                // Map "accepted" filter to show "active" and "awaiting_confirmation" contracts
+                if (statusValue === "accepted") {
+                    return contract.display_status === "active" ||
+                        contract.display_status === "awaiting_confirmation";
+                }
+
+                // Map "pending" filter to show "pending" and "pending_action"
+                if (statusValue === "pending") {
+                    return contract.display_status === "pending" ||
+                        contract.display_status === "pending_action";
+                }
+
+                // Direct match for other statuses
+                return contract.display_status === filterStatus;
+            });
+        }
+
+        // Apply search filter
+        if (searchValue) {
+            const searchLower = searchValue.toLowerCase();
+            filtered = filtered.filter(contract =>
+                contract.crop_name?.toLowerCase().includes(searchLower) ||
+                contract.farmer_detail?.full_name?.toLowerCase().includes(searchLower) ||
+                contract.buyer_detail?.full_name?.toLowerCase().includes(searchLower) ||
+                contract.id?.toString().includes(searchLower)
+            );
+        }
+
+        return filtered;
+    }, []);
+
+    // Update fetchContracts to also filter after fetching
     const fetchContracts = useCallback(async () => {
         setLoading(true);
         try {
             const params = new URLSearchParams({
                 page: currentPage,
                 page_size: pageSize,
-                ...(statusFilter && { status: statusFilter }),
                 ...(searchTerm && { search: searchTerm })
             });
 
+            // Fetch all contracts for the current page (no status filter from API)
             const response = await apiClient.get(`/contract/my/?${params}`);
             console.log("📄 Fetched contracts:", response.data);
-            setContracts(response.data.contracts || []);
+
+            const rawContracts = response.data.contracts || [];
+
+            // Add display_status to each contract
+            const contractsWithDisplayStatus = rawContracts.map(contract => ({
+                ...contract,
+                display_status: getDisplayStatus(contract)
+            }));
+
+            // Apply frontend filters
+            const filtered = filterContracts(contractsWithDisplayStatus, statusFilter, searchTerm);
+
+            setContracts(contractsWithDisplayStatus);
+            setFilteredContracts(filtered);
             setTotalItems(response.data.total || 0);
             setTotalPages(Math.ceil((response.data.total || 0) / pageSize));
         } catch (error) {
@@ -2165,7 +2288,49 @@ export default function FarmerContracts() {
         } finally {
             setLoading(false);
         }
-    }, [apiClient, currentPage, pageSize, statusFilter, searchTerm, t]);
+    }, [apiClient, currentPage, pageSize, statusFilter, searchTerm, t, getDisplayStatus, filterContracts]);
+
+    // Update effect to re-filter when statusFilter, searchTerm, or contracts change
+    useEffect(() => {
+        if (contracts.length > 0) {
+            const filtered = filterContracts(contracts, statusFilter, searchTerm);
+            setFilteredContracts(filtered);
+        }
+    }, [statusFilter, searchTerm, contracts, filterContracts]);
+
+    // Update statistics to use filtered contracts or all contracts based on view
+    const stats = useMemo(() => {
+        const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+        const statsContracts = filteredContracts.length > 0 ? filteredContracts : contracts;
+
+        const total = statsContracts.length;
+
+        // For pending: contracts where user hasn't accepted/rejected yet
+        const pending = statsContracts.filter(c => {
+            const isBuyer = c.buyer === currentUser.id;
+            const isFarmer = c.farmer === currentUser.id;
+            const userStatus = isBuyer ? c.buyer_status : (isFarmer ? c.farmer_status : null);
+            return (userStatus === "pending" && c.status !== "rejected") ||
+                c.display_status === "pending" ||
+                c.display_status === "pending_action";
+        }).length;
+
+        // For active: contracts that are accepted, admin confirmed, and not completed
+        const active = statsContracts.filter(c => {
+            return c.display_status === "active" || c.display_status === "awaiting_confirmation";
+        }).length;
+
+        // For completed: contracts that are fully paid and delivered or rejected
+        const completed = statsContracts.filter(c => {
+            return c.display_status === "completed" || c.display_status === "rejected";
+        }).length;
+
+        const totalValue = statsContracts.reduce((sum, c) => sum + (c.total_amount || 0), 0);
+        const paidValue = statsContracts.reduce((sum, c) => sum + (c.amount_paid || 0), 0);
+
+        return { total, pending, active, completed, totalValue, paidValue };
+    }, [contracts, filteredContracts]);
+
 
     useEffect(() => {
         fetchContracts();
@@ -2181,16 +2346,12 @@ export default function FarmerContracts() {
             console.log("✅ Contract creation successful:", response.data);
             console.log("📄 Contract details:", response.data.contract);
 
-            // Success toast with contract ID
             toast.success(
                 t('contract_created_successfully', { id: response.data.contract?.id || '' }) ||
                 `Contract #${response.data.contract?.id || ''} created successfully!`
             );
 
-            // Refresh the contracts list
             await fetchContracts();
-
-            // Close modal and clear stock data
             setShowCreateModal(false);
             setStockData(null);
 
@@ -2199,14 +2360,11 @@ export default function FarmerContracts() {
         } catch (error) {
             console.error("❌ Contract creation failed:", error);
 
-            // Log detailed error information
             if (error.response) {
-                // Server responded with error
                 console.error("Server error response:", {
                     status: error.response.status,
                     statusText: error.response.statusText,
                     data: error.response.data,
-                    headers: error.response.headers
                 });
 
                 const errorMessage = error.response.data?.error ||
@@ -2214,7 +2372,6 @@ export default function FarmerContracts() {
                     error.response.data?.details ||
                     t('failed_to_create_contract');
 
-                // Display error details if available
                 if (error.response.data?.details) {
                     console.error("Error details:", error.response.data.details);
                     toast.error(`${errorMessage}: ${JSON.stringify(error.response.data.details)}`);
@@ -2223,11 +2380,9 @@ export default function FarmerContracts() {
                 }
 
             } else if (error.request) {
-                // Request was made but no response received
                 console.error("No response received:", error.request);
                 toast.error(t('network_error') || "Network error. Please check your connection.");
             } else {
-                // Something else caused the error
                 console.error("Error setting up request:", error.message);
                 toast.error(error.message || t('failed_to_create_contract'));
             }
@@ -2325,23 +2480,11 @@ export default function FarmerContracts() {
         }
     };
 
-    // Statistics
-    const stats = useMemo(() => {
-        const total = contracts.length;
-        const pending = contracts.filter(c => c.status === "pending").length;
-        const accepted = contracts.filter(c => c.status === "accepted").length;
-        const completed = contracts.filter(c => c.status === "completed").length;
-        const totalValue = contracts.reduce((sum, c) => sum + (c.total_amount || 0), 0);
-        const paidValue = contracts.reduce((sum, c) => sum + (c.amount_paid || 0), 0);
 
-        return { total, pending, accepted, completed, totalValue, paidValue };
-    }, [contracts]);
-
-    // Render contract card
+    // Render contract card - using display_status
     const renderContractCard = (contract) => {
         const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
 
-        // In your data, these are direct IDs (not objects)
         const buyerId = contract.buyer;
         const farmerId = contract.farmer;
         const deliverId = contract.deliver;
@@ -2349,45 +2492,58 @@ export default function FarmerContracts() {
 
         const canEdit = canEditContract(contract);
 
-        // For accept/reject - check the user's own status, not the other party's
-        const canAccept = canAcceptRejectContract(contract) &&
-            ((buyerId === currentUser.id && contract.buyer_status === "pending") ||
-                (farmerId === currentUser.id && contract.farmer_status === "pending"));
+        // Get user-specific statuses
+        const isBuyer = buyerId === currentUser.id;
+        const isFarmer = farmerId === currentUser.id;
 
-        const canReject = canAcceptRejectContract(contract) &&
-            ((buyerId === currentUser.id && contract.buyer_status === "pending") ||
-                (farmerId === currentUser.id && contract.farmer_status === "pending"));
+        let userStatus = null;
+        let otherPartyStatus = null;
+        let userRole = "";
 
+        if (isBuyer) {
+            userStatus = contract.buyer_status;
+            otherPartyStatus = contract.farmer_status;
+            userRole = "buyer";
+        } else if (isFarmer) {
+            userStatus = contract.farmer_status;
+            otherPartyStatus = contract.buyer_status;
+            userRole = "farmer";
+        }
+
+        // Determine if user can accept/reject - MUST be defined BEFORE use
+        const userAccepted = userStatus === "accepted";
+        const userRejected = userStatus === "rejected";
+
+        const canAccept = (userStatus === "pending") &&
+            contract.status === "pending" &&
+            !userRejected;
+
+        const canReject = (userStatus === "pending") &&
+            contract.status === "pending";
+
+        // Determine display status
+        let displayStatus = contract.display_status;
+
+        // Override display status based on user's individual status
+        if (userStatus === "rejected") {
+            displayStatus = "rejected";
+        } else if (userStatus === "pending" && otherPartyStatus === "accepted") {
+            displayStatus = "pending_action";
+        } else if (userStatus === "accepted" && !contract.admin_confirmed) {
+            displayStatus = "awaiting_confirmation";
+        } else if (contract.status === "accepted" && contract.admin_confirmed && !contract.is_fully_paid) {
+            displayStatus = "active";
+        }
+
+        // Check if waiting for other party
+        const waitingForOther = userStatus === "pending" && otherPartyStatus === "pending";
+        const otherPartyAccepted = otherPartyStatus === "accepted" && userStatus === "pending";
+
+        // Payment and delivery permissions
         const canPay = canMakePayment(contract);
         const canStartDel = canStartDelivery(contract);
         const canCompleteDel = canCompleteDelivery(contract);
         const canUpdateDel = canUpdateDelivery(contract);
-
-        // Determine user's role in this contract using direct IDs
-        const isBuyer = buyerId === currentUser.id;
-        const isFarmer = farmerId === currentUser.id;
-        const isDeliver = deliverId === currentUser.id;
-
-        // Get user's acceptance status based on their role
-        let userAccepted = false;
-        let userRejected = false;
-        let otherPartyStatus = "";
-
-        if (isBuyer) {
-            userAccepted = contract.buyer_status === "accepted";
-            userRejected = contract.buyer_status === "rejected";
-            otherPartyStatus = contract.farmer_status;
-        } else if (isFarmer) {
-            userAccepted = contract.farmer_status === "accepted";
-            userRejected = contract.farmer_status === "rejected";
-            otherPartyStatus = contract.buyer_status;
-        }
-
-        // Show waiting message if other party hasn't accepted yet and user hasn't acted
-        const waitingForOther = contract.status === "pending" &&
-            !userAccepted &&
-            !userRejected &&
-            otherPartyStatus === "pending";
 
         return (
             <div key={contract.id} className="contract-card">
@@ -2399,7 +2555,7 @@ export default function FarmerContracts() {
                             <span className="creator-badge">Created by you</span>
                         )}
                     </div>
-                    <StatusBadge status={contract.status} />
+                    <StatusBadge status={displayStatus} />
                 </div>
 
                 <div className="contract-card-details">
@@ -2436,6 +2592,12 @@ export default function FarmerContracts() {
                         <div className="detail">
                             <User size={14} />
                             <span>{isFarmer ? "You (Farmer)" : contract.farmer_detail?.full_name}</span>
+                            {!isFarmer && contract.farmer_status === "accepted" && (
+                                <CheckCircle size={12} color="#2e7d32" title="Farmer has accepted" />
+                            )}
+                            {!isFarmer && contract.farmer_status === "rejected" && (
+                                <XCircle size={12} color="#c62828" title="Farmer has rejected" />
+                            )}
                         </div>
                         <div className="detail">
                             <Truck size={14} />
@@ -2449,6 +2611,12 @@ export default function FarmerContracts() {
                             <span>
                                 {isBuyer ? "You (Buyer)" : contract.buyer_detail?.full_name}
                             </span>
+                            {!isBuyer && contract.buyer_status === "accepted" && (
+                                <CheckCircle size={12} color="#2e7d32" title="Buyer has accepted" />
+                            )}
+                            {!isBuyer && contract.buyer_status === "rejected" && (
+                                <XCircle size={12} color="#c62828" title="Buyer has rejected" />
+                            )}
                         </div>
                         <div className="detail">
                             <ShieldCheck size={14} />
@@ -2464,6 +2632,9 @@ export default function FarmerContracts() {
                     {userAccepted && (
                         <div className="acceptance-status accepted">
                             <CheckCircle size={12} /> You have accepted this contract
+                            {!contract.admin_confirmed && (
+                                <span className="waiting-badge">Waiting for admin confirmation</span>
+                            )}
                         </div>
                     )}
 
@@ -2473,18 +2644,26 @@ export default function FarmerContracts() {
                         </div>
                     )}
 
-                    {/* Show other party's status */}
-                    {otherPartyStatus === "accepted" && !userAccepted && !userRejected && (
-                        <div className="waiting-status">
-                            <Clock size={12} />
-                            The other party has accepted. Waiting for your response...
-                        </div>
-                    )}
-
+                    {/* Show other party's status when waiting */}
                     {waitingForOther && (
                         <div className="waiting-status">
                             <Clock size={12} />
                             Waiting for the other party to respond...
+                        </div>
+                    )}
+
+                    {otherPartyAccepted && (
+                        <div className="waiting-status">
+                            <CheckCircle size={12} color="#2e7d32" />
+                            The other party has accepted. Please review and respond.
+                        </div>
+                    )}
+
+                    {/* Show admin confirmation needed */}
+                    {userAccepted && otherPartyStatus === "accepted" && !contract.admin_confirmed && (
+                        <div className="waiting-status">
+                            <ShieldCheck size={12} />
+                            Both parties have accepted. Waiting for admin confirmation...
                         </div>
                     )}
                 </div>
@@ -2502,8 +2681,8 @@ export default function FarmerContracts() {
                         {t('view_details')}
                     </button>
 
-                    {/* Edit - Only for creator when pending */}
-                    {canEdit && (
+                    {/* Edit - Only for creator when pending and not yet accepted/rejected */}
+                    {canEdit && userStatus === "pending" && (
                         <button
                             className="action-btn edit"
                             onClick={() => {
@@ -2516,8 +2695,8 @@ export default function FarmerContracts() {
                         </button>
                     )}
 
-                    {/* Accept - For buyer/farmer when their status is pending */}
-                    {canAccept && (
+                    {/* Accept - When user hasn't responded yet */}
+                    {canAccept && !userAccepted && !userRejected && (
                         <button
                             className="action-btn accept"
                             onClick={() => handleAcceptContract(contract.id)}
@@ -2527,8 +2706,8 @@ export default function FarmerContracts() {
                         </button>
                     )}
 
-                    {/* Reject - For buyer/farmer when their status is pending */}
-                    {canReject && (
+                    {/* Reject - When user hasn't responded yet */}
+                    {canReject && !userAccepted && !userRejected && (
                         <button
                             className="action-btn reject"
                             onClick={() => handleRejectContract(contract.id)}
@@ -2709,6 +2888,34 @@ export default function FarmerContracts() {
                 cursor: pointer;
                 transition: all 0.3s ease;
                 }
+
+
+                /* Additional status styles */
+                .status-badge.status-pending_action {
+                    background: #fff8e1;
+                    color: #b76e0a;
+                }
+
+                .status-badge.status-awaiting_confirmation {
+                    background: #e3f2fd;
+                    color: #1565c0;
+                }
+
+                .status-badge.status-active {
+                    background: #e8f5e9;
+                    color: #2e7d32;
+                }
+
+                .waiting-badge {
+                    display: inline-block;
+                    margin-left: 8px;
+                    padding: 2px 6px;
+                    background: #e3f2fd;
+                    color: #1565c0;
+                    border-radius: 4px;
+                    font-size: 10px;
+                    font-weight: 500;
+                }
                 
                 .create-btn:hover {
                 transform: translateY(-2px);
@@ -2740,6 +2947,69 @@ export default function FarmerContracts() {
                 display: flex;
                 align-items: center;
                 justify-content: center;
+                }
+
+                /* Filter Info Styles */
+                .filter-info {
+                    margin-bottom: 20px;
+                    padding: 12px 16px;
+                    background: #f8fafc;
+                    border-radius: 12px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    flex-wrap: wrap;
+                    gap: 12px;
+                }
+
+                .filter-badge {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 8px;
+                    padding: 6px 12px;
+                    background: white;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 8px;
+                    font-size: 13px;
+                    color: #1e293b;
+                }
+
+                .clear-filter {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 4px;
+                    padding: 4px 8px;
+                    background: #fee2e2;
+                    border: none;
+                    border-radius: 6px;
+                    color: #c62828;
+                    cursor: pointer;
+                    font-size: 11px;
+                    transition: all 0.2s ease;
+                }
+
+                .clear-filter:hover {
+                    background: #ffcdd2;
+                }
+
+                .clear-filters-btn {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 8px;
+                    padding: 10px 20px;
+                    background: #fee2e2;
+                    color: #c62828;
+                    border: none;
+                    border-radius: 10px;
+                    cursor: pointer;
+                    font-weight: 500;
+                    margin-top: 16px;
+                    transition: all 0.2s ease;
+                }
+
+                .clear-filters-btn:hover {
+                    background: #ffcdd2;
+                    transform: translateY(-1px);
                 }
                 
                 .stat-info {
@@ -3980,6 +4250,7 @@ export default function FarmerContracts() {
                 }
             `}</style>
 
+
             <div className="page-header">
                 <div className="header-left">
                     <h1>{t('my_contracts')}</h1>
@@ -4012,20 +4283,20 @@ export default function FarmerContracts() {
                 </div>
                 <div className="stat-card">
                     <div className="stat-icon" style={{ backgroundColor: "#e3f2fd", color: "#1565c0" }}>
-                        <CheckCircle size={24} />
+                        <TrendingUp size={24} />
                     </div>
                     <div className="stat-info">
-                        <div className="stat-value">{stats.accepted}</div>
+                        <div className="stat-value">{stats.active}</div>
                         <div className="stat-label">{t('active_contracts')}</div>
                     </div>
                 </div>
                 <div className="stat-card">
                     <div className="stat-icon" style={{ backgroundColor: "#f3e8ff", color: "#7e22ce" }}>
-                        <DollarSign size={24} />
+                        <Award size={24} />
                     </div>
                     <div className="stat-info">
-                        <div className="stat-value">{stats.paidValue?.toLocaleString()} RWF</div>
-                        <div className="stat-label">{t('total_paid')}</div>
+                        <div className="stat-value">{stats.completed}</div>
+                        <div className="stat-label">{t('completed_contracts')}</div>
                     </div>
                 </div>
             </div>
@@ -4047,9 +4318,10 @@ export default function FarmerContracts() {
                     onChange={(e) => setStatusFilter(e.target.value)}
                 >
                     <option value="">{t('all_statuses')}</option>
-                    <option value="pending">{t('pending')}</option>
-                    <option value="accepted">{t('accepted')}</option>
+                    <option value="pending">{t('pending')} (Waiting for response)</option>
+                    <option value="accepted">{t('active')} (In Progress)</option>
                     <option value="completed">{t('completed')}</option>
+                    <option value="rejected">{t('rejected')}</option>
                     <option value="failed">{t('failed')}</option>
                 </select>
                 <button className="refresh-btn" onClick={fetchContracts}>
@@ -4058,8 +4330,36 @@ export default function FarmerContracts() {
                 </button>
             </div>
 
+            {statusFilter && filteredContracts.length > 0 && (
+                <div className="filter-info">
+                    <span className="filter-badge">
+                        {t('showing')}: {filteredContracts.length} {t('contracts')}
+                        {statusFilter === "accepted" && t('active_contracts')}
+                        {statusFilter === "pending" && t('pending_contracts')}
+                        {statusFilter === "completed" && t('completed_contracts')}
+                        {statusFilter === "rejected" && t('rejected_contracts')}
+                        {statusFilter === "failed" && t('failed_contracts')}
+                        <button className="clear-filter" onClick={() => setStatusFilter("")}>
+                            <X size={12} /> {t('clear')}
+                        </button>
+                    </span>
+                </div>
+            )}
+
             {loading ? (
                 <LoadingSpinner />
+            ) : (statusFilter && filteredContracts.length === 0) ? (
+                <div className="empty-state">
+                    <Filter size={48} />
+                    <p>{t('no_contracts_match_filter')}</p>
+                    <button className="clear-filters-btn" onClick={() => {
+                        setStatusFilter("");
+                        setSearchTerm("");
+                    }}>
+                        <X size={14} />
+                        {t('clear_all_filters')}
+                    </button>
+                </div>
             ) : contracts.length === 0 ? (
                 <div className="empty-state">
                     <FileText size={48} />
@@ -4072,7 +4372,7 @@ export default function FarmerContracts() {
             ) : (
                 <>
                     <div className="contracts-grid">
-                        {contracts.map(renderContractCard)}
+                        {(statusFilter ? filteredContracts : contracts).map(renderContractCard)}
                     </div>
 
                     <Pagination
@@ -4084,7 +4384,7 @@ export default function FarmerContracts() {
                             setPageSize(size);
                             setCurrentPage(1);
                         }}
-                        totalItems={totalItems}
+                        totalItems={statusFilter ? filteredContracts.length : totalItems}
                     />
                 </>
             )}
@@ -4160,3 +4460,4 @@ export default function FarmerContracts() {
         </div>
     );
 }
+
