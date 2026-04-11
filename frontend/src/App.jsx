@@ -13,6 +13,8 @@ import UserManagement from './component/pages/admin/UserManagement';
 import ContractsManagement from './component/pages/admin/ManageContracts';
 import AdminStandardsManagement from './component/pages/admin/ManageStandards';
 import AdminChatManagement from './component/pages/admin/ChatManagement';
+import AdminReports from './component/pages/admin/reportPage';
+import AdminNotificationManagement from './component/pages/admin/ManageNotifications';
 
 
 
@@ -23,6 +25,7 @@ import MyStockManagement from './component/pages/farmer/MyStocks';
 import FarmerChatPage from './component/pages/farmer/FarmerChatManagement';
 import FarmerMarketMatching from './component/pages/farmer/MarketMatching';
 import FarmerContracts from './component/pages/farmer/ManageContracts';
+import FarmerNotificationManagement from './component/pages/farmer/FarmerNotifications';
 
 
 //Buyer Pages
@@ -33,6 +36,7 @@ import BuyerChatPage from './component/pages/buyer/BuyerChatManagement';
 import BuyerShowStocks from './component/pages/buyer/ShowStocks';
 import BuyerMarketMatching from './component/pages/buyer/MarketMarching';
 import BuyerContracts from './component/pages/buyer/ManageContracts';
+import BuyerNotificationManagement from './component/pages/buyer/MyNotifications';
 
 
 function App() {
@@ -62,6 +66,8 @@ function App() {
             <Route path="contracts" element={<ContractsManagement />} />
             <Route path="standards" element={<AdminStandardsManagement />} />
             <Route path="chats" element={<AdminChatManagement />} />
+            <Route path="reports" element={<AdminReports />} />
+            <Route path="notifications" element={<AdminNotificationManagement />} />
           </Route>
 
 
@@ -71,6 +77,7 @@ function App() {
             <Route path="chats" element={<FarmerChatPage />} />
             <Route path="market-matches" element={<FarmerMarketMatching />} />
             <Route path="contracts" element={<FarmerContracts />} />
+            <Route path="notifications" element={<FarmerNotificationManagement />} />
           </Route>
 
 
@@ -78,9 +85,10 @@ function App() {
             <Route path="dashboard" element={<BuyerDashboard />} />
             <Route path="standards" element={<BuyerStandardsManagement />} />
             <Route path="chats" element={<BuyerChatPage />} />
-            <Route path="stocks" element={<BuyerShowStocks />} />
+            <Route path="crops" element={<BuyerShowStocks />} />
             <Route path="market-matches" element={<BuyerMarketMatching />} />
             <Route path="contracts" element={<BuyerContracts />} />
+            <Route path="notifications" element={<BuyerNotificationManagement />} />
 
           </Route>
 

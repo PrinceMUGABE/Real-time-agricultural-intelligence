@@ -11,7 +11,9 @@ import {
   Filter, ChevronDown, ChevronUp, X, Eye, EyeOff, Star, Award,
   AlertCircle, CheckCircle, Percent, ArrowUpRight, ArrowDownRight,
   MessageCircle, Bell, FileText, Truck, CreditCard, Smartphone,
-  Globe, Phone, Mail, Home, Briefcase, Settings, LogOut
+  Globe, Phone, Mail, Home, Briefcase, Settings, LogOut, Crop,
+  Leaf, TrendingUp as TrendingUpIcon, AlertTriangle, CheckSquare,
+  XCircle, Clock as ClockIcon, Send, Archive
 } from "lucide-react";
 import {
   LineChart as ReLineChart, Line, AreaChart, Area, BarChart, Bar,
@@ -59,7 +61,6 @@ const getRelativeTime = (date) => {
     const now = new Date();
     const past = new Date(date);
     
-    // Check if date is valid
     if (isNaN(past.getTime())) return "Unknown";
     
     const diffMs = now - past;
@@ -196,6 +197,7 @@ function NotificationItem({ notification, onMarkRead }) {
       case 'payment': return <DollarSign size={16} />;
       case 'delivery': return <Truck size={16} />;
       case 'message': return <MessageCircle size={16} />;
+      case 'system': return <Bell size={16} />;
       default: return <Bell size={16} />;
     }
   };
@@ -203,7 +205,7 @@ function NotificationItem({ notification, onMarkRead }) {
   return (
     <div className={`notification-item ${notification.status === 'unread' ? 'unread' : ''}`}>
       <div className="notification-icon">
-        {getIcon(notification.notification_type)}
+        {getIcon(notification.notification_type || 'system')}
       </div>
       <div className="notification-content">
         <div className="notification-title">{notification.title}</div>
@@ -219,8 +221,7 @@ function NotificationItem({ notification, onMarkRead }) {
   );
 }
 
-// Updated ChatPreview Component
-function ChatPreview({ chat, onClick }) {
+function ChatPreviewItem({ chat, onClick }) {
   const { t } = useTranslation();
   
   const getLastMessageTime = (chat) => {
@@ -228,24 +229,16 @@ function ChatPreview({ chat, onClick }) {
     return "No messages";
   };
 
-  // Safely extract last message text
   const getLastMessageText = (chat) => {
     if (!chat.last_message) return "No messages";
-    
-    // If last_message is an object, try to extract content
     if (typeof chat.last_message === 'object') {
       return chat.last_message.content || chat.last_message.text || "Message";
     }
-    
-    // If it's a string, return it directly
     return chat.last_message;
   };
 
-  // Safely get participant name
   const getChatName = (chat) => {
     if (chat.name) return chat.name;
-    
-    // Try to get participant names for one-on-one chats
     if (chat.participants && chat.participants.length > 0) {
       const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
       const otherParticipant = chat.participants.find(p => p.id !== currentUser.id);
@@ -254,7 +247,6 @@ function ChatPreview({ chat, onClick }) {
       }
       return chat.participants[0]?.full_name || "Chat";
     }
-    
     return "Chat";
   };
 
@@ -287,13 +279,49 @@ export default function AdminDashboard() {
   const [contractReport, setContractReport] = useState(null);
   const [paymentReport, setPaymentReport] = useState(null);
   const [matchReport, setMatchReport] = useState(null);
+  const [standardsReport, setStandardsReport] = useState(null);
   const [matchTrends, setMatchTrends] = useState(null);
   const [notifications, setNotifications] = useState([]);
+  const [unreadNotifications, setUnreadNotifications] = useState([]);
   const [recentChats, setRecentChats] = useState([]);
-  const [recentActivities, setRecentActivities] = useState([]);
+  const [chatsWithUnread, setChatsWithUnread] = useState([]);
   const [dateRange, setDateRange] = useState({ period: 'month' });
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
+
+  // ── Enhanced Contract Status Calculation ────────────────────────────────────
+  const calculateContractStatusDistribution = useCallback((contracts) => {
+    if (!contracts || !contracts.contracts) {
+      return { completed: 0, rejected: 0, accepted: 0, failed: 0, pending: 0 };
+    }
+    
+    let completed = 0;
+    let rejected = 0;
+    let accepted = 0;
+    let failed = 0;
+    let pending = 0;
+    
+    contracts.contracts.forEach(contract => {
+      // Check if contract is truly completed (both payment and delivery completed)
+      const isTrulyCompleted = 
+        contract.payment_status === 'completed' && 
+        contract.delivery_status === 'completed';
+      
+      if (isTrulyCompleted || contract.status === 'completed') {
+        completed++;
+      } else if (contract.status === 'rejected') {
+        rejected++;
+      } else if (contract.status === 'accepted') {
+        accepted++;
+      } else if (contract.status === 'failed') {
+        failed++;
+      } else if (contract.status === 'pending') {
+        pending++;
+      }
+    });
+    
+    return { completed, rejected, accepted, failed, pending };
+  }, []);
 
   // ── Fetch Dashboard Data ────────────────────────────────────────────────────
   const fetchDashboardData = useCallback(async () => {
@@ -308,7 +336,7 @@ export default function AdminDashboard() {
       console.log("✅ Dashboard Summary:", summaryRes.data);
       setDashboardData(summaryRes.data.summary);
 
-      // Fetch user growth with proper date range
+      // Fetch user growth
       const growthRes = await apiClient.get('/reports/admin/user-growth/', {
         params: { period: dateRange.period }
       });
@@ -335,17 +363,30 @@ export default function AdminDashboard() {
       console.log("✅ Market Matching Report:", matchRes.data);
       setMatchReport(matchRes.data);
 
-      // Fetch notifications
+      // Fetch standards report
+      const standardsRes = await apiClient.get('/reports/standards/');
+      console.log("✅ Standards Report:", standardsRes.data);
+      setStandardsReport(standardsRes.data);
+
+      // Fetch notifications - get unread first
       const notifRes = await apiClient.get('/notifications/');
       console.log("✅ Notifications:", notifRes.data);
-      setNotifications(notifRes.data.notifications?.slice(0, 10) || []);
+      const allNotifications = notifRes.data.notifications || [];
+      setNotifications(allNotifications);
+      // Get unread notifications (limit to 5)
+      const unread = allNotifications.filter(n => n.status === 'unread').slice(0, 5);
+      setUnreadNotifications(unread);
 
-      // Fetch recent chats
+      // Fetch chats - get chats with unread messages
       const chatsRes = await apiClient.get('/chat/my-chats/', {
-        params: { page_size: 10 }
+        params: { page_size: 20 }
       });
       console.log("✅ Recent Chats:", chatsRes.data);
-      setRecentChats(chatsRes.data.chats || []);
+      const allChats = chatsRes.data.chats || [];
+      setRecentChats(allChats.slice(0, 10));
+      // Get chats with unread messages (limit to 5)
+      const withUnread = allChats.filter(chat => chat.unread_count > 0).slice(0, 5);
+      setChatsWithUnread(withUnread);
 
       // Generate match trends from actual match data
       if (matchRes.data?.matches) {
@@ -354,7 +395,6 @@ export default function AdminDashboard() {
           matches: 1
         }));
         
-        // Aggregate by date
         const aggregated = {};
         matchDates.forEach(item => {
           if (!aggregated[item.date]) {
@@ -373,7 +413,7 @@ export default function AdminDashboard() {
     } finally {
       setLoading(false);
     }
-  }, [apiClient, dateRange.period, t]);
+  }, [dateRange.period, t]);
 
   useEffect(() => {
     fetchDashboardData();
@@ -400,24 +440,57 @@ export default function AdminDashboard() {
     }));
   }, [stockReport]);
 
-  const contractByStatusData = useMemo(() => {
-    if (!contractReport?.by_status?.details) return [];
-    return contractReport.by_status.details.map(item => ({
-      name: item.status,
-      value: item.count,
-      amount: item.total_value,
-    }));
-  }, [contractReport]);
+  // Enhanced contract status distribution with proper completion criteria
+  const contractStatusDistribution = useMemo(() => {
+    const distribution = calculateContractStatusDistribution(contractReport || {});
+    return [
+      { name: 'Completed', value: distribution.completed, color: '#10b981' },
+      { name: 'Accepted', value: distribution.accepted, color: '#3b82f6' },
+      { name: 'Pending', value: distribution.pending, color: '#f59e0b' },
+      { name: 'Rejected', value: distribution.rejected, color: '#ef4444' },
+      { name: 'Failed', value: distribution.failed, color: '#6b7280' },
+    ].filter(item => item.value > 0);
+  }, [contractReport, calculateContractStatusDistribution]);
 
   const paymentByMethodData = useMemo(() => {
-    if (!paymentReport?.by_method?.details) return [];
-    return paymentReport.by_method.details.map(item => ({
-      name: item.method === 'mobile_money' ? 'Mobile Money' : 
-            item.method === 'bank_transfer' ? 'Bank Transfer' : 'Cash',
-      value: item.amount,
-      count: item.count,
+    if (!paymentReport?.analytics?.by_method?.details) return [];
+    return paymentReport.analytics.by_method.details.map(item => ({
+      name: item.method,
+      value: item.total_amount,
+      count: item.transaction_count,
     }));
   }, [paymentReport]);
+
+  // Standards report data
+  const standardsByCropData = useMemo(() => {
+    if (!standardsReport?.analytics?.by_crop?.details) return [];
+    return standardsReport.analytics.by_crop.details.slice(0, 8).map(item => ({
+      name: item.crop,
+      count: item.standards_count,
+      value: item.potential_value,
+      avgPrice: item.avg_price,
+    }));
+  }, [standardsReport]);
+
+  const standardsBySeasonData = useMemo(() => {
+    if (!standardsReport?.analytics?.by_season) return [];
+    return standardsReport.analytics.by_season.map(item => ({
+      name: item.season,
+      count: item.standards_count,
+      value: item.total_value,
+    }));
+  }, [standardsReport]);
+
+  const standardsByQualityData = useMemo(() => {
+    if (!standardsReport?.analytics?.by_quality) return [];
+    return standardsReport.analytics.by_quality.map(item => ({
+      name: item.name,
+      grade: item.grade,
+      count: item.standards_count,
+      value: item.total_value,
+      avgPrice: item.avg_price,
+    }));
+  }, [standardsReport]);
 
   const matchByProductData = useMemo(() => {
     if (!matchReport?.by_product) return [];
@@ -448,7 +521,6 @@ export default function AdminDashboard() {
 
   const matchTrendsData = useMemo(() => {
     if (!matchTrends?.trend || matchTrends.trend.length === 0) {
-      // Generate sample data based on actual matches
       if (matchReport?.matches?.length > 0) {
         return matchReport.matches.map((match, idx) => ({
           date: new Date(match.stock?.created_at || Date.now() - (idx * 86400000)).toISOString().split('T')[0],
@@ -478,16 +550,24 @@ export default function AdminDashboard() {
   // ── Colors for Charts ───────────────────────────────────────────────────────
   const COLORS = ['#2d5a2d', '#1565c0', '#b76e0a', '#7e22ce', '#dc2626', '#059669', '#d97706', '#6b7280'];
   const STATUS_COLORS = {
-    pending: '#b76e0a',
-    accepted: '#1565c0',
-    completed: '#2e7d32',
-    rejected: '#dc2626',
-    failed: '#ef4444'
+    'Completed': '#10b981',
+    'Accepted': '#3b82f6',
+    'Pending': '#f59e0b',
+    'Rejected': '#ef4444',
+    'Failed': '#6b7280'
   };
 
-  // ── Download Chart as PNG ───────────────────────────────────────────────────
-  const downloadChart = (chartId, title) => {
-    toast.info(t('download_feature_coming_soon'));
+  // ── Navigation Functions ────────────────────────────────────────────────────
+  const navigateToNotifications = () => {
+    window.location.href = '/admin/notifications';
+  };
+
+  const navigateToChats = () => {
+    window.location.href = '/admin/chats';
+  };
+
+  const openChat = (chat) => {
+    window.location.href = `/admin/chats?chat=${chat.id}`;
   };
 
   // ── Mark Notification as Read ───────────────────────────────────────────────
@@ -497,14 +577,15 @@ export default function AdminDashboard() {
       setNotifications(prev => prev.map(n => 
         n.id === id ? { ...n, status: 'read' } : n
       ));
+      setUnreadNotifications(prev => prev.filter(n => n.id !== id));
     } catch (error) {
       console.error("Error marking notification as read:", error);
     }
   };
 
-  // ── Navigate to Chat ────────────────────────────────────────────────────────
-  const openChat = (chat) => {
-    window.location.href = `/admin/chats?chat=${chat.id}`;
+  // ── Download Chart as PNG ───────────────────────────────────────────────────
+  const downloadChart = (chartId, title) => {
+    toast.info(t('download_feature_coming_soon'));
   };
 
   // ── Render ──────────────────────────────────────────────────────────────────
@@ -808,7 +889,7 @@ export default function AdminDashboard() {
           min-height: 300px;
         }
 
-        /* Notifications Sidebar */
+        /* Sidebar Cards */
         .notifications-card, .chats-card, .activities-card {
           background: white;
           border-radius: 20px;
@@ -838,6 +919,12 @@ export default function AdminDashboard() {
           background: none;
           border: none;
           cursor: pointer;
+          padding: 4px 8px;
+          border-radius: 6px;
+          transition: all 0.2s;
+        }
+        .view-all-btn:hover {
+          background: #e8f5e9;
         }
         .notification-item {
           display: flex;
@@ -847,7 +934,7 @@ export default function AdminDashboard() {
           position: relative;
         }
         .notification-item.unread {
-          background: #f8fafc;
+          background: linear-gradient(90deg, #e8f5e9, transparent);
           margin: 0 -12px;
           padding: 12px;
           border-radius: 12px;
@@ -888,6 +975,11 @@ export default function AdminDashboard() {
           border: none;
           color: #2d5a2d;
           cursor: pointer;
+          opacity: 0.6;
+          transition: opacity 0.2s;
+        }
+        .notification-mark-read:hover {
+          opacity: 1;
         }
 
         /* Chat Preview */
@@ -951,35 +1043,14 @@ export default function AdminDashboard() {
           border-radius: 10px;
         }
 
-        /* Activity Item */
-        .activity-item {
-          display: flex;
-          gap: 12px;
-          padding: 12px 0;
-          border-bottom: 1px solid #f1f5f9;
-        }
-        .activity-icon {
-          width: 32px;
-          height: 32px;
-          border-radius: 8px;
-          background: #f1f5f9;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          flex-shrink: 0;
-        }
-        .activity-content {
-          flex: 1;
-        }
-        .activity-title {
-          font-size: 13px;
-          font-weight: 500;
-          color: #0f172a;
-          margin-bottom: 2px;
-        }
-        .activity-time {
-          font-size: 10px;
+        /* Empty State */
+        .empty-state {
+          text-align: center;
+          padding: 40px;
           color: #94a3b8;
+        }
+        .empty-state svg {
+          margin-bottom: 8px;
         }
 
         /* Market Matching Section */
@@ -1065,6 +1136,20 @@ export default function AdminDashboard() {
         @keyframes spin {
           to { transform: rotate(360deg); }
         }
+
+        /* Badge */
+        .badge {
+          display: inline-flex;
+          align-items: center;
+          padding: 2px 8px;
+          border-radius: 20px;
+          font-size: 11px;
+          font-weight: 600;
+        }
+        .badge-success { background: #d1fae5; color: #065f46; }
+        .badge-warning { background: #fed7aa; color: #9a3412; }
+        .badge-danger { background: #fee2e2; color: #991b1b; }
+        .badge-info { background: #dbeafe; color: #1e40af; }
 
         /* Responsive */
         @media (max-width: 1200px) {
@@ -1179,13 +1264,12 @@ export default function AdminDashboard() {
                 trendLabel={t('vs_previous')}
               />
               <SummaryCard
-                title={t('total_contracts')}
-                value={formatNumber(contractReport?.summary?.total_contracts || 0)}
-                icon={<Handshake size={24} />}
+                title={t('total_standards')}
+                value={formatNumber(standardsReport?.summary?.total_standards || 0)}
+                icon={<Crop size={24} />}
                 color="#7e22ce"
                 bgColor="#f3e8ff"
-                trend={dashboardData?.total_contracts?.percentage_change}
-                trendLabel={t('vs_previous')}
+                trend={null}
               />
             </div>
 
@@ -1213,11 +1297,11 @@ export default function AdminDashboard() {
                 subtitle={`${formatNumber(paymentReport?.summary?.total_transactions)} ${t('transactions')}`}
               />
               <StatCard
-                label={t('active_contracts')}
-                value={formatNumber(contractReport?.summary?.pending_count || 0)}
-                icon={<Activity size={20} />}
+                label={t('active_standards')}
+                value={formatNumber(standardsReport?.summary?.active_standards || 0)}
+                icon={<Leaf size={20} />}
                 color="#059669"
-                subtitle={`${formatPercentage(contractReport?.summary?.pending_count / (contractReport?.summary?.total_contracts || 1) * 100)} ${t('of_total')}`}
+                subtitle={`${formatPercentage(standardsReport?.summary?.active_percentage)} ${t('active')}`}
               />
             </div>
 
@@ -1232,12 +1316,15 @@ export default function AdminDashboard() {
               <button className={`tab-btn ${activeTab === 'financial' ? 'active' : ''}`} onClick={() => setActiveTab('financial')}>
                 <DollarSign size={16} /> {t('financial_analytics')}
               </button>
+              <button className={`tab-btn ${activeTab === 'standards' ? 'active' : ''}`} onClick={() => setActiveTab('standards')}>
+                <Crop size={16} /> {t('crop_standards')}
+              </button>
             </div>
 
             {/* Overview Tab */}
             {activeTab === 'overview' && (
               <div className="charts-grid">
-                {/* User Growth Chart - Area Chart */}
+                {/* User Growth Chart */}
                 <ChartCard
                   title={t('user_growth_trend')}
                   description={t('user_growth_description')}
@@ -1258,7 +1345,34 @@ export default function AdminDashboard() {
                   </ResponsiveContainer>
                 </ChartCard>
 
-                {/* Stock by Product - Bar Chart */}
+                {/* Contract Status Distribution - Enhanced */}
+                <ChartCard
+                  title={t('contract_status_distribution')}
+                  description={t('contract_status_description')}
+                >
+                  <ResponsiveContainer width="100%" height={300}>
+                    <RePieChart>
+                      <Pie
+                        data={contractStatusDistribution}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                        outerRadius={100}
+                        fill="#8884d8"
+                        dataKey="value"
+                      >
+                        {contractStatusDistribution.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={STATUS_COLORS[entry.name] || COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(value) => formatNumber(value)} />
+                      <Legend />
+                    </RePieChart>
+                  </ResponsiveContainer>
+                </ChartCard>
+
+                {/* Stock by Product */}
                 <ChartCard
                   title={t('stock_by_product')}
                   description={t('stock_by_product_description')}
@@ -1277,34 +1391,7 @@ export default function AdminDashboard() {
                   </ResponsiveContainer>
                 </ChartCard>
 
-                {/* Contract Status Distribution - Pie Chart */}
-                <ChartCard
-                  title={t('contract_status_distribution')}
-                  description={t('contract_status_description')}
-                >
-                  <ResponsiveContainer width="100%" height={300}>
-                    <RePieChart>
-                      <Pie
-                        data={contractByStatusData}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                        outerRadius={100}
-                        fill="#8884d8"
-                        dataKey="value"
-                      >
-                        {contractByStatusData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={STATUS_COLORS[entry.name] || COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip formatter={(value) => formatNumber(value)} />
-                      <Legend />
-                    </RePieChart>
-                  </ResponsiveContainer>
-                </ChartCard>
-
-                {/* Match Trends - Line Chart */}
+                {/* Match Trends */}
                 <ChartCard
                   title={t('market_matching_trends')}
                   description={t('match_trends_description')}
@@ -1395,7 +1482,7 @@ export default function AdminDashboard() {
                             {match.stock?.product_name} - {match.farmer?.full_name} → {match.buyer?.full_name}
                           </div>
                           <div className="top-item-value">
-                            <span style={{ background: '#e8f5e9', padding: '4px 8px', borderRadius: '20px', fontSize: '12px' }}>
+                            <span className="badge badge-success">
                               {match.match_score}%
                             </span>
                           </div>
@@ -1441,29 +1528,25 @@ export default function AdminDashboard() {
                   description={t('contract_value_by_product_description')}
                 >
                   <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={contractReport?.by_product?.details?.slice(0, 8) || []}>
+                    <BarChart data={contractReport?.analytics?.top_products || []}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                       <XAxis dataKey="product" stroke="#64748b" fontSize={11} angle={-45} textAnchor="end" height={80} />
                       <YAxis stroke="#64748b" fontSize={11} />
                       <Tooltip formatter={(value) => formatCurrency(value)} />
                       <Legend />
-                      <Bar dataKey="value" fill="#7e22ce" name={t('contract_value')} radius={[8, 8, 0, 0]} />
+                      <Bar dataKey="total_value" fill="#7e22ce" name={t('contract_value')} radius={[8, 8, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </ChartCard>
 
-                {/* Payment Trends - Area Chart */}
-                {paymentReport?.over_time?.details?.length > 0 && (
+                {/* Payment Trends */}
+                {paymentReport?.analytics?.monthly_trend?.details?.length > 0 && (
                   <ChartCard
                     title={t('payment_trends')}
                     description={t('payment_trends_description')}
                   >
                     <ResponsiveContainer width="100%" height={300}>
-                      <AreaChart data={paymentReport.over_time.details.map(item => ({
-                        month: item.month,
-                        amount: item.amount,
-                        count: item.count
-                      }))}>
+                      <AreaChart data={paymentReport.analytics.monthly_trend.details}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                         <XAxis dataKey="month" stroke="#64748b" fontSize={11} />
                         <YAxis stroke="#64748b" fontSize={11} />
@@ -1476,23 +1559,129 @@ export default function AdminDashboard() {
                 )}
               </div>
             )}
+
+            {/* Crop Standards Tab */}
+            {activeTab === 'standards' && (
+              <div className="charts-grid">
+                <ChartCard
+                  title={t('standards_by_crop')}
+                  description={t('standards_by_crop_description')}
+                >
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={standardsByCropData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                      <XAxis dataKey="name" stroke="#64748b" fontSize={11} angle={-45} textAnchor="end" height={80} />
+                      <YAxis stroke="#64748b" fontSize={11} />
+                      <Tooltip formatter={(value) => formatNumber(value)} />
+                      <Legend />
+                      <Bar dataKey="count" fill="#2d5a2d" name={t('standards_count')} radius={[8, 8, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </ChartCard>
+
+                <ChartCard
+                  title={t('standards_by_season')}
+                  description={t('standards_by_season_description')}
+                >
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={standardsBySeasonData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                      <XAxis dataKey="name" stroke="#64748b" fontSize={11} angle={-45} textAnchor="end" height={80} />
+                      <YAxis stroke="#64748b" fontSize={11} />
+                      <Tooltip formatter={(value) => formatNumber(value)} />
+                      <Legend />
+                      <Bar dataKey="count" fill="#b76e0a" name={t('standards_count')} radius={[8, 8, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </ChartCard>
+
+                <ChartCard
+                  title={t('standards_by_quality')}
+                  description={t('standards_by_quality_description')}
+                >
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie
+                        data={standardsByQualityData}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                        outerRadius={100}
+                        fill="#8884d8"
+                        dataKey="count"
+                      >
+                        {standardsByQualityData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(value) => formatNumber(value)} />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </ChartCard>
+
+                {/* Standards Summary Stats */}
+                {standardsReport?.summary && (
+                  <ChartCard
+                    title={t('standards_summary')}
+                    description={t('standards_summary_description')}
+                  >
+                    <div className="stats-row" style={{ marginBottom: 0 }}>
+                      <StatCard
+                        label={t('total_standards')}
+                        value={formatNumber(standardsReport.summary.total_standards)}
+                        icon={<Crop size={20} />}
+                        color="#2d5a2d"
+                      />
+                      <StatCard
+                        label={t('unique_crops')}
+                        value={formatNumber(standardsReport.summary.unique_crops)}
+                        icon={<Leaf size={20} />}
+                        color="#1565c0"
+                      />
+                      <StatCard
+                        label={t('total_buyers')}
+                        value={formatNumber(standardsReport.summary.total_buyers)}
+                        icon={<Users size={20} />}
+                        color="#b76e0a"
+                      />
+                      <StatCard
+                        label={t('avg_price_per_kg')}
+                        value={formatCurrency(standardsReport.summary.avg_price_per_kg)}
+                        icon={<DollarSign size={20} />}
+                        color="#7e22ce"
+                      />
+                    </div>
+                  </ChartCard>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Sidebar Content */}
           <div className="sidebar-content">
-            {/* Recent Notifications */}
+            {/* Recent Unread Notifications */}
             <div className="notifications-card">
               <div className="card-header">
-                <h3><Bell size={18} /> {t('recent_notifications')}</h3>
-                <button className="view-all-btn">{t('view_all')}</button>
+                <h3><Bell size={18} /> {t('recent_notifications')} 
+                  {unreadNotifications.length > 0 && (
+                    <span className="badge badge-danger" style={{ marginLeft: '8px' }}>
+                      {unreadNotifications.length}
+                    </span>
+                  )}
+                </h3>
+                <button className="view-all-btn" onClick={navigateToNotifications}>
+                  {t('view_all')}
+                </button>
               </div>
-              {notifications.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
+              {unreadNotifications.length === 0 ? (
+                <div className="empty-state">
                   <Bell size={32} />
-                  <p style={{ marginTop: '8px' }}>{t('no_notifications')}</p>
+                  <p>{t('no_unread_notifications')}</p>
                 </div>
               ) : (
-                notifications.map(notif => (
+                unreadNotifications.map(notif => (
                   <NotificationItem 
                     key={notif.id} 
                     notification={notif} 
@@ -1502,20 +1691,28 @@ export default function AdminDashboard() {
               )}
             </div>
 
-            {/* Recent Chats */}
+            {/* Chats with Unread Messages */}
             <div className="chats-card">
               <div className="card-header">
-                <h3><MessageCircle size={18} /> {t('recent_chats')}</h3>
-                <button className="view-all-btn">{t('view_all')}</button>
+                <h3><MessageCircle size={18} /> {t('unread_messages')}
+                  {chatsWithUnread.length > 0 && (
+                    <span className="badge badge-danger" style={{ marginLeft: '8px' }}>
+                      {chatsWithUnread.reduce((sum, chat) => sum + (chat.unread_count || 0), 0)}
+                    </span>
+                  )}
+                </h3>
+                <button className="view-all-btn" onClick={navigateToChats}>
+                  {t('view_all')}
+                </button>
               </div>
-              {recentChats.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
+              {chatsWithUnread.length === 0 ? (
+                <div className="empty-state">
                   <MessageCircle size={32} />
-                  <p style={{ marginTop: '8px' }}>{t('no_chats')}</p>
+                  <p>{t('no_unread_messages')}</p>
                 </div>
               ) : (
-                recentChats.map(chat => (
-                  <ChatPreview key={chat.id} chat={chat} onClick={openChat} />
+                chatsWithUnread.map(chat => (
+                  <ChatPreviewItem key={chat.id} chat={chat} onClick={openChat} />
                 ))
               )}
             </div>
@@ -1527,28 +1724,28 @@ export default function AdminDashboard() {
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div style={{ textAlign: 'center', padding: '12px', background: '#f8fafc', borderRadius: '12px' }}>
-                  <div style={{ fontSize: '24px', fontWeight: 700, color: '#2d5a2d' }}>
-                    {formatNumber(contractReport?.summary?.pending_count || 0)}
-                  </div>
-                  <div style={{ fontSize: '11px', color: '#64748b' }}>{t('pending_contracts')}</div>
-                </div>
-                <div style={{ textAlign: 'center', padding: '12px', background: '#f8fafc', borderRadius: '12px' }}>
-                  <div style={{ fontSize: '24px', fontWeight: 700, color: '#1565c0' }}>
-                    {formatNumber(contractReport?.summary?.completed_count || 0)}
+                  <div style={{ fontSize: '24px', fontWeight: 700, color: '#10b981' }}>
+                    {formatNumber(contractStatusDistribution.find(c => c.name === 'Completed')?.value || 0)}
                   </div>
                   <div style={{ fontSize: '11px', color: '#64748b' }}>{t('completed_contracts')}</div>
+                </div>
+                <div style={{ textAlign: 'center', padding: '12px', background: '#f8fafc', borderRadius: '12px' }}>
+                  <div style={{ fontSize: '24px', fontWeight: 700, color: '#3b82f6' }}>
+                    {formatNumber(contractStatusDistribution.find(c => c.name === 'Accepted')?.value || 0)}
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#64748b' }}>{t('accepted_contracts')}</div>
+                </div>
+                <div style={{ textAlign: 'center', padding: '12px', background: '#f8fafc', borderRadius: '12px' }}>
+                  <div style={{ fontSize: '24px', fontWeight: 700, color: '#f59e0b' }}>
+                    {formatNumber(contractStatusDistribution.find(c => c.name === 'Pending')?.value || 0)}
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#64748b' }}>{t('pending_contracts')}</div>
                 </div>
                 <div style={{ textAlign: 'center', padding: '12px', background: '#f8fafc', borderRadius: '12px' }}>
                   <div style={{ fontSize: '24px', fontWeight: 700, color: '#b76e0a' }}>
                     {formatNumber(matchReport?.total_matches || 0)}
                   </div>
                   <div style={{ fontSize: '11px', color: '#64748b' }}>{t('active_matches')}</div>
-                </div>
-                <div style={{ textAlign: 'center', padding: '12px', background: '#f8fafc', borderRadius: '12px' }}>
-                  <div style={{ fontSize: '24px', fontWeight: 700, color: '#7e22ce' }}>
-                    {formatNumber(paymentReport?.summary?.total_transactions || 0)}
-                  </div>
-                  <div style={{ fontSize: '11px', color: '#64748b' }}>{t('total_transactions')}</div>
                 </div>
               </div>
             </div>

@@ -24,4 +24,10 @@ urlpatterns = [
     path('market-matching/buyer-matches/', views.BuyerMatchesReportView.as_view(), name='buyer-matches-report'),
     path('market-matching/all-matches/', views.AllMatchesReportView.as_view(), name='all-matches-report'),
     path('market-matching/trends/', views.MatchTrendsView.as_view(), name='match-trends'),
+    
+    # Standards Report
+    path('standards/', views.StandardsReportView.as_view(), name='standards-report'),
+    
+    # Enhanced Reports
+    path('admin/enhanced-contracts/', views.EnhancedContractReportView.as_view(), name='enhanced-contracts-report'),
 ]

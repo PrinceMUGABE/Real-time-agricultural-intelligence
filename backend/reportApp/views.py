@@ -6,7 +6,7 @@ from django.shortcuts import get_object_or_404
 from userApp.models import CustomUser
 from .serializers import ReportFilterSerializer, DateRangeSerializer
 from .report_services import (
-    AdminReportService, FarmerReportService, BuyerReportService
+    AdminReportService, FarmerReportService, BuyerReportService, StandardsReportService
 )
 from .market_matching_reports import MarketMatchingReports, MarketMatchingTrends
 import logging
@@ -55,6 +55,7 @@ class AdminUserGrowthView(APIView):
         
         period = request.query_params.get('period', 'month')
         growth_data = AdminReportService.get_user_growth_report(period)
+        
         
         return Response(growth_data)
 
@@ -370,3 +371,56 @@ class MatchTrendsView(APIView):
         
         return Response(trends)
     
+    
+    
+    
+class StandardsReportView(APIView):
+    """Generate crop standards report"""
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        user = request.user
+        # Allow admin and buyers to view standards report
+        if user.role not in ['admin', 'buyer']:
+            return Response(
+                {'error': 'Admin or buyer access required'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        filter_serializer = ReportFilterSerializer(data=request.query_params)
+        filter_serializer.is_valid(raise_exception=True)
+        
+        # If buyer, only show their own standards
+        if user.role == 'buyer':
+            filters = filter_serializer.validated_data
+            filters['buyer_id'] = user.id
+        
+        report = StandardsReportService.get_standards_report(filter_serializer.validated_data)
+        
+        if report is None:
+            return Response(
+                {'error': 'Failed to generate report'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        
+        return Response(report)
+    
+
+class EnhancedContractReportView(APIView):
+    """Enhanced contract report with professional summaries"""
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        user = request.user
+        if user.role != 'admin':
+            return Response(
+                {'error': 'Admin access required'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        filter_serializer = ReportFilterSerializer(data=request.query_params)
+        filter_serializer.is_valid(raise_exception=True)
+        
+        report = AdminReportService.get_contract_report(filter_serializer.validated_data)
+        
+        return Response(report)

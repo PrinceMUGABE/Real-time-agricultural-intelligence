@@ -284,8 +284,8 @@ export default function LandingPage() {
   const navigateByRole = (role) => {
     switch(role) {
       case "admin":  navigate("/admin");     break;
-      case "farmer": navigate("/farmer");    break;
-      case "buyer":  navigate("/buyer");     break;
+      case "farmer": navigate("/farmer/myStocks");    break;
+      case "buyer":  navigate("/buyer/contracts");     break;
       default:       navigate("/dashboard");
     }
   };
