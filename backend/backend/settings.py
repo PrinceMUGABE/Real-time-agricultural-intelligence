@@ -86,6 +86,7 @@ INSTALLED_APPS = [
     'contractApp',
     'marketMatchingApp',
     'reportApp',
+    'predictionApp',
 ]
 
 MIDDLEWARE = [

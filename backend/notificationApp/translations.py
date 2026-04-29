@@ -260,6 +260,366 @@ NOTIFICATION_MESSAGES = {
         "sw": "Kuingia mpya kumegunduliwa kwenye akaunti yako. Kama hukufanya hilo, badilisha nenosiri yako mara moja.",
         "rw": "Kwinjira gushya bigukundwe kuri konti yawe. Niba utibyukoreye, hindura ijambo banga ako kanya.",
     },
+    
+    "market_alert_urgent": {
+        "en": "🚨 Market Alert: Urgent Selling Opportunity",
+        "fr": "🚨 Alerte Marché: Opportunité de Vente Urgente",
+        "sw": "🚨 Tahadhari ya Soko: Fursa ya Kuuza kwa Haraka",
+        "rw": "🚨 Itangazo ry'Isoko: Amahirwe yo Kugurisha Vuba",
+    },
+    "market_alert_urgent_desc": {
+        "en": "Market prices for {products} are predicted to drop. Consider selling soon to maximize your returns.",
+        "fr": "Les prix du marché pour {products} devraient baisser. Envisagez de vendre bientôt pour maximiser vos rendements.",
+        "sw": "Bei za soko za {products} zinatarajiwa kushuka. Fikiria kuuza hivi karibuni ili kuongeza mapato yako.",
+        "rw": "Ibiciro by'isoko bya {products} biteganijwe kugabanuka. Tekereza kugurisha vuba kugirango wongere inyungu zawe.",
+    },
+    "buying_opportunity_title": {
+        "en": "💰 Buying Opportunity Detected!",
+        "fr": "💰 Opportunité d'Achat Détectée!",
+        "sw": "💰 Fursa ya Kununua Imepatikana!",
+        "rw": "💰 Amahirwe yo Kugura Abonetse!",
+    },
+    "buying_opportunity_desc": {
+        "en": "Good time to buy {products}. Prices are favorable based on market trends.",
+        "fr": "Bon moment pour acheter {products}. Les prix sont favorables selon les tendances du marché.",
+        "sw": "Muda mzuri wa kununua {products}. Bei ni nzuri kulingana na mwenendo wa soko.",
+        "rw": "Igihe cyiza cyo kugura {products}. Ibiciro birashimishije ukurikije imikorere y'isoko.",
+    },
+    
+
+    # ── Market Prediction Messages ────────────────────────────────────────────────
+    "market_insufficient_data": {
+        "en": "Not enough market data for reliable prediction at this time.",
+        "fr": "Pas assez de données de marché pour une prédiction fiable pour le moment.",
+        "sw": "Hakuna data ya kutosha ya soko kwa utabiri wa kuaminika kwa wakati huu.",
+        "rw": "Ntakiboneka cyihagije cy'isoko kugirango hanywe byizere muri iki gihe.",
+    },
+    "market_need_more_data": {
+        "en": "We need more completed contracts to analyze {crop} market trends.",
+        "fr": "Nous avons besoin de plus de contrats complétés pour analyser les tendances du marché {crop}.",
+        "sw": "Tunahitaji kandarasi zaidi zilizokamilika kuchambua mwenendo wa soko la {crop}.",
+        "rw": "Dukeneye amasezerano yarangiye kugirango dusuzume imikorere y'isoko rya {crop}.",
+    },
+    "market_hold_rising": {
+        "en": "Market is rising strongly (+{change}%). Consider holding for better returns.",
+        "fr": "Le marché est en forte hausse (+{change}%). Envisagez de conserver pour de meilleurs rendements.",
+        "sw": "Soko linaongezeka kwa kasi (+{change}%). Fikiria kushikilia kwa mapato bora.",
+        "rw": "Isoko rirazamuka cyane (+{change}%). Tekereza guhagarika kugirango ubone inyungu nyinshi.",
+    },
+    "market_sell_after_rise": {
+        "en": "Price increased {change}% recently but predicted to stabilize. Good time to sell.",
+        "fr": "Le prix a augmenté de {change}% récemment mais devrait se stabiliser. Bon moment pour vendre.",
+        "sw": "Bei imeongezeka kwa {change}% hivi karibuni lakini inatarajiwa kutulia. Mzuri wa kuuza.",
+        "rw": "Igiciro cyazamutseho {change}% vuba aha keretse kigabanuka. Igihe cyiza cyo kugurisha.",
+    },
+    "market_sell_urgent_declining": {
+        "en": "⚠️ Market declining ({change}% drop). Prices predicted to fall further. Consider selling now!",
+        "fr": "⚠️ Le marché est en baisse (baisse de {change}%). Les prix devraient encore baisser. Envisagez de vendre maintenant!",
+        "sw": "⚠️ Soko linashuka (kushuka kwa {change}%). Bei zinatarajiwa kushuka zaidi. Fikiria kuuza sasa!",
+        "rw": "⚠️ Isoko riragabanuka (kugabanuka kwa {change}%). Ibiciro biteganijwe kugabanuka. Tekereza kugurisha ubu!",
+    },
+    "market_hold_recovering": {
+        "en": "Market declined but showing signs of recovery. Might be worth holding.",
+        "fr": "Le marché a baissé mais montre des signes de reprise. Cela vaut peut-être la peine de conserver.",
+        "sw": "Soko lilishuka lakini linaonyesha dalili za kupona. Inaweza kuwa ya thamani kushikilia.",
+        "rw": "Isoko ryagabanutse ariko ryerekana ibimenyetso byo gukira. Gushobora kuba ingirakamaro guhagarika.",
+    },
+    "market_hold_upward": {
+        "en": "Market showing upward trend (+{change}%). Good time to monitor prices.",
+        "fr": "Le marché montre une tendance à la hausse (+{change}%). Bon moment pour surveiller les prix.",
+        "sw": "Soko linaonyesha mwelekeo wa kupanda (+{change}%). Muda mzuri wa kufuatilia bei.",
+        "rw": "Isoko ryerekana imikorere yizamuka (+{change}%). Igihe cyiza cyo gukurikira ibiciro.",
+    },
+    "market_sell_downward": {
+        "en": "Market showing downward trend ({change}% drop). Consider selling soon.",
+        "fr": "Le marché montre une tendance à la baisse (baisse de {change}%). Envisagez de vendre bientôt.",
+        "sw": "Soko linaonyesha mwelekeo wa kushuka (kushuka kwa {change}%). Fikiria kuuza hivi karibuni.",
+        "rw": "Isoko ryerekana imikorere yigabanuka (kugabanuka kwa {change}%). Tekereza kugurisha vuba.",
+    },
+    "market_stable": {
+        "en": "Market stable. No immediate action recommended.",
+        "fr": "Marché stable. Aucune action immédiate recommandée.",
+        "sw": "Soko ni sawa. Hakuna hatua ya haraka iliyopendekezwa.",
+        "rw": "Isoko rirahagaze. Ntagikorwa gihita gisabwe.",
+    },
+    "market_neutral": {
+        "en": "Market conditions are neutral at this time.",
+        "fr": "Les conditions du marché sont neutres pour le moment.",
+        "sw": "Hali ya soko ni ya upande wowote kwa wakati huu.",
+        "rw": "Ibimeze by'isoko ntibyibagije muri iki gihe.",
+    },
+    "market_disclaimer": {
+        "en": "⚠️ These predictions are based on historical data and market trends. Past performance does not guarantee future results.",
+        "fr": "⚠️ Ces prédictions sont basées sur des données historiques et les tendances du marché. Les performances passées ne garantissent pas les résultats futurs.",
+        "sw": "⚠️ Utabiri huu unategemea data ya kihistoria na mwenendo wa soko. Utendaji wa zamani hauhakikishi matokeo ya baadaye.",
+        "rw": "⚠️ Ibi biteganijwe bishingiye ku makuru y'ahise n'imikorere y'isoko. Ibigezweho ntibisimbuza ibizaza.",
+    },
+
+    # ── Buyer Specific Messages ───────────────────────────────────────────────────
+    "buyer_wait_prices_falling": {
+        "en": "Prices are falling ({change}% trend). Expected to drop further. Consider waiting.",
+        "fr": "Les prix baissent (tendance de {change}%). Devrait encore baisser. Envisagez d'attendre.",
+        "sw": "Bei zinashuka (mwelekeo wa {change}%). Inatarajiwa kushuka zaidi. Fikiria kungoja.",
+        "rw": "Ibiciro biragabanuka (imikorere ya {change}%). Biteganijwe kugabanuka. Tekereza gutegereza.",
+    },
+    "buyer_buy_now_recovering": {
+        "en": "📈 Prices have dropped but predicted to recover. Good buying opportunity!",
+        "fr": "📈 Les prix ont baissé mais devraient se rétablir. Bonne opportunité d'achat!",
+        "sw": "📈 Bei zimeshuka lakini zinatarajiwa kupona. Fursa nzuri ya kununua!",
+        "rw": "📈 Ibiciro byaragabanutse ariko biteganijwe kuzamuka. Amahirwe meza yo kugura!",
+    },
+    "buyer_buy_now_rising": {
+        "en": "📈 Prices rising ({change}% increase). Buy now before prices go higher!",
+        "fr": "📈 Les prix augmentent (augmentation de {change}%). Achetez maintenant avant que les prix n'augmentent!",
+        "sw": "📈 Bei zinaongezeka (ongezeko la {change}%). Nunua sasa kabla bei hazijapanda zaidi!",
+        "rw": "📈 Ibiciro biriyongera (kwiyongera kwa {change}%). Kugura ubu mbere y'uko ibiciro rizamuka!",
+    },
+    "buyer_wait_stabilizing": {
+        "en": "Prices increased but predicted to stabilize soon. Consider waiting.",
+        "fr": "Les prix ont augmenté mais devraient se stabiliser bientôt. Envisagez d'attendre.",
+        "sw": "Bei zimeongezeka lakini zinatarajiwa kutulia hivi karibuni. Fikiria kungoja.",
+        "rw": "Ibiciro byazamutse ariko biteganijwe guhagarara. Tekereza gutegereza.",
+    },
+    "buyer_monitor_market": {
+        "en": "Market stable. Monitor prices for good opportunities.",
+        "fr": "Marché stable. Surveillez les prix pour de bonnes opportunités.",
+        "sw": "Soko ni sawa. Fuatilia bei kwa fursa nzuri.",
+        "rw": "Isoko rirahagaze. Kurikirana ibiciro kugirango ubone amahirwe.",
+    },
+    "buyer_daily_advice": {
+        "en": "Check back daily for updated market predictions and buying opportunities!",
+        "fr": "Revenez quotidiennement pour des prévisions de marché mises à jour et des opportunités d'achat!",
+        "sw": "Angalia kila siku kwa utabiri wa soko uliosasishwa na fursa za ununuzi!",
+        "rw": "Gerageza buri munsi kugirango ubone ibyitezwe by'isoko byavuguruwe n'amahirwe yo kugura!",
+    },
+
+    # ── Farmer Specific Messages ──────────────────────────────────────────────────
+    "farmer_recommendations_summary": {
+        "en": "Based on market analysis, here are recommendations for your active stocks.",
+        "fr": "Sur la base de l'analyse du marché, voici les recommandations pour vos stocks actifs.",
+        "sw": "Kulingana na uchambuzi wa soko, hapa kuna mapendekezo kwa hisa zako zinazotumika.",
+        "rw": "Ushingiye ku isesengura ry'isoko, dore ibyifuzo ku bubiko bwawe bukora.",
+    },
+    "farmer_no_stocks": {
+        "en": "You don't have any active stocks. Add stocks to get market recommendations.",
+        "fr": "Vous n'avez pas de stocks actifs. Ajoutez des stocks pour obtenir des recommandations de marché.",
+        "sw": "Huna hisa yoyote inayotumika. Ongeza hisa ili kupata mapendekezo ya soko.",
+        "rw": "Nta bubiko ukora. Ongeraho ububiko kugirango ubone ibyifuzo by'isoko.",
+    },
+    "farmer_stock_label": {
+        "en": "Your Stock",
+        "fr": "Votre Stock",
+        "sw": "Hisa Yako",
+        "rw": "Ububiko Bwawe",
+    },
+    "farmer_current_value_label": {
+        "en": "Current Value (RWF)",
+        "fr": "Valeur Actuelle (RWF)",
+        "sw": "Thamani ya Sasa (RWF)",
+        "rw": "Agaciro K'ubu (RWF)",
+    },
+    "farmer_predicted_value_label": {
+        "en": "Predicted Future Value (RWF)",
+        "fr": "Valeur Future Prévue (RWF)",
+        "sw": "Thamani ya Baadaye Iliyotabiriwa (RWF)",
+        "rw": "Agaciro Kazaza Kitezwe (RWF)",
+    },
+    "farmer_urgency_label": {
+        "en": "Urgency",
+        "fr": "Urgence",
+        "sw": "Haraka",
+        "rw": "Igitabaza",
+    },
+    "farmer_action_taken": {
+        "en": "Recommended Action",
+        "fr": "Action Recommandée",
+        "sw": "Hatua Iliyopendekezwa",
+        "rw": "Igikorwa Gisabwe",
+    },
+
+    # ── Stock Specific Messages ───────────────────────────────────────────────────
+    "storage_warning_days": {
+        "en": "⚠️ This stock has been stored for {days} days. Quality may be degrading.",
+        "fr": "⚠️ Ce stock a été stocké pendant {days} jours. La qualité peut se dégrader.",
+        "sw": "⚠️ Hisa hii imehifadhiwa kwa siku {days}. Ubora unaweza kuzorota.",
+        "rw": "⚠️ Ubu bubiko bubikwe iminsi {days}. Ubwoko bushobora kugabanuka.",
+    },
+    "storage_info_days": {
+        "en": "Stock stored for {days} days. Monitor quality regularly.",
+        "fr": "Stock stocké depuis {days} jours. Surveillez régulièrement la qualité.",
+        "sw": "Hisa imehifadhiwa kwa siku {days}. Fuatilia ubora mara kwa mara.",
+        "rw": "Ububiko bubikwe iminsi {days}. Kurikirana ubwoko buri gihe.",
+    },
+    "stock_not_found": {
+        "en": "Stock not found or you don't have permission to view it.",
+        "fr": "Stock introuvable ou vous n'avez pas la permission de le voir.",
+        "sw": "Hisa haikupatikana au huna ruhusa ya kuiangalia.",
+        "rw": "Ububiko ntibuboneka cyangwa nta burenganzira ubufite bwo kureba.",
+    },
+    "stock_current_value": {
+        "en": "Current Estimated Value",
+        "fr": "Valeur Estimée Actuelle",
+        "sw": "Thamini ya Sasa Inayokadiriwa",
+        "rw": "Agaciro K'ubu Giteganijwe",
+    },
+    "stock_future_value": {
+        "en": "Predicted Future Value",
+        "fr": "Valeur Future Prévue",
+        "sw": "Thamani ya Baadaye Iliyotabiriwa",
+        "rw": "Agaciro Kazaza Kitezwe",
+    },
+    "stock_potential_change": {
+        "en": "Potential Gain/Loss",
+        "fr": "Gain/Pertes Potentiel",
+        "sw": "Faida/Hasara Inayowezekana",
+        "rw": "Inyungu/Igihombo Gishoboka",
+    },
+    "stock_advice": {
+        "en": "Our Advice",
+        "fr": "Notre Conseil",
+        "sw": "Ushauri Wetu",
+        "rw": "Inama Yacu",
+    },
+    "market_insufficient_data_stock": {
+        "en": "Not enough market data available for {product} to provide reliable predictions.",
+        "fr": "Pas assez de données de marché disponibles pour {product} pour fournir des prédictions fiables.",
+        "sw": "Hakuna data ya kutosha ya soko inapatikana kwa {product} kutoa utabiri wa kuaminika.",
+        "rw": "Ntakiboneka gihagije cy'isoko kiboneka kuri {product} kugirango habeho ibyitezwe byizewe.",
+    },
+
+    # ── Price Comparison Messages ────────────────────────────────────────────────
+    "price_higher_than_before": {
+        "en": "{amount} RWF higher than your previous purchase",
+        "fr": "{amount} RWF plus élevé que votre achat précédent",
+        "sw": "{amount} RWF juu kuliko ununuzi wako wa awali",
+        "rw": "{amount} RWF hejuru y'iguzi ryawe rya kera",
+    },
+    "price_lower_than_before": {
+        "en": "{amount} RWF lower than your previous purchase",
+        "fr": "{amount} RWF inférieur à votre achat précédent",
+        "sw": "{amount} RWF chini kuliko ununuzi wako wa awali",
+        "rw": "{amount} RWF hasi y'iguzi ryawe rya kera",
+    },
+    "price_same_as_before": {
+        "en": "Same price as your previous purchase",
+        "fr": "Même prix que votre achat précédent",
+        "sw": "Bei sawa na ununuzi wako wa awali",
+        "rw": "Igiciro kimwe n'iguzi ryawe rya kera",
+    },
+
+    # ── Urgency Levels ───────────────────────────────────────────────────────────
+    "urgency_high": {
+        "en": "High - Take action soon",
+        "fr": "Élevée - Agissez bientôt",
+        "sw": "Kubwa - Chukua hatua hivi karibuni",
+        "rw": "Ikabije - Kora ikintu vuba",
+    },
+    "urgency_medium": {
+        "en": "Medium - Consider acting",
+        "fr": "Moyenne - Envisagez d'agir",
+        "sw": "Kati - Fikiria kuchukua hatua",
+        "rw": "Hagati - Tekereza gukora ikintu",
+    },
+    "urgency_low": {
+        "en": "Low - Monitor only",
+        "fr": "Faible - Surveiller uniquement",
+        "sw": "Chini - Fuatilia tu",
+        "rw": "Ntaga remake - Kurikirana gusa",
+    },
+
+    # ── Endpoint Access Messages ─────────────────────────────────────────────────
+    "farmers_only_endpoint": {
+        "en": "This endpoint is only accessible to farmers.",
+        "fr": "Ce point d'accès est uniquement accessible aux agriculteurs.",
+        "sw": "Kipengele hiki kinapatikana kwa wakulima pekee.",
+        "rw": "Iyi nzira iboneka gusa ku bahinzi.",
+    },
+    "buyers_only_endpoint": {
+        "en": "This endpoint is only accessible to buyers.",
+        "fr": "Ce point d'accès est uniquement accessible aux acheteurs.",
+        "sw": "Kipengele hiki kinapatikana kwa wanunuzi pekee.",
+        "rw": "Iyi nzira iboneka gusa ku baguzi.",
+    },
+
+    # ── Market Labels for Frontend ───────────────────────────────────────────────
+    "market_current_price": {
+        "en": "Current Average Price (RWF/kg)",
+        "fr": "Prix Moyen Actuel (RWF/kg)",
+        "sw": "Bei ya Sasa ya Wastani (RWF/kg)",
+        "rw": "Igiciro K'ubu Kigereranije (RWF/kg)",
+    },
+    "market_price_range": {
+        "en": "Price Range (RWF/kg)",
+        "fr": "Gamme de Prix (RWF/kg)",
+        "sw": "Masafa ya Bei (RWF/kg)",
+        "rw": "Ibyiciro by'Igiciro (RWF/kg)",
+    },
+    "market_price_change": {
+        "en": "30-Day Price Change",
+        "fr": "Variation de Prix sur 30 Jours",
+        "sw": "Mabadiliko ya Bei ya Siku 30",
+        "rw": "Impinduka z'Igiciro mu Minsi 30",
+    },
+    "market_trend": {
+        "en": "Market Trend",
+        "fr": "Tendance du Marché",
+        "sw": "Mwelekeo wa Soko",
+        "rw": "Imikorere y'Isoko",
+    },
+    "market_predicted_price": {
+        "en": "Predicted Future Price (RWF/kg)",
+        "fr": "Prix Futur Prévu (RWF/kg)",
+        "sw": "Bei ya Baadaye Iliyotabiriwa (RWF/kg)",
+        "rw": "Igiciro Kazaza Kitezwe (RWF/kg)",
+    },
+    "market_total_volume": {
+        "en": "Total Volume Sold",
+        "fr": "Volume Total Vendu",
+        "sw": "Jumla ya Kiasi Kilichouzwa",
+        "rw": "Ingano Yose Yagurishijwe",
+    },
+    "market_transactions": {
+        "en": "Number of Transactions",
+        "fr": "Nombre de Transactions",
+        "sw": "Idadi ya Miamala",
+        "rw": "Umubare w'Ibikorwa",
+    },
+    "market_recommendation": {
+        "en": "Recommendation",
+        "fr": "Recommandation",
+        "sw": "Mapendekezo",
+        "rw": "Icyifuzo",
+    },
+    "market_confidence": {
+        "en": "Prediction Confidence",
+        "fr": "Confiance de Prédiction",
+        "sw": "Ujasiri wa Utabiri",
+        "rw": "Ubudashyikirwa bw'Ibyitezwe",
+    },
+    "market_crop_label": {
+        "en": "Crop",
+        "fr": "Culture",
+        "sw": "Zao",
+        "rw": "Ihingwa",
+    },
+    "market_prediction_label": {
+        "en": "4-Week Prediction",
+        "fr": "Prédiction 4 Semaines",
+        "sw": "Utabiri wa Wiki 4",
+        "rw": "Ibyitezwe mu Byumweru 4",
+    },
+    "buyer_product_label": {
+        "en": "Product",
+        "fr": "Produit",
+        "sw": "Bidhaa",
+        "rw": "Igicuruzwa",
+    },
+    "buyer_action_label": {
+        "en": "Suggested Action",
+        "fr": "Action Suggérée",
+        "sw": "Hatua Iliyopendekezwa",
+        "rw": "Igikorwa Gisabwe",
+    },
 }
 
 SUPPORTED_LANGUAGES = {"en", "fr", "sw", "rw"}

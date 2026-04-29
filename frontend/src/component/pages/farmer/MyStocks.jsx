@@ -375,7 +375,8 @@ function LocationSelector({ locationParts, onChange, error }) {
     );
 }
 
-function StockCard({ stock, onView, onEdit, onDelete, onAddMovement, t }) {
+
+function StockCard({ stock, onView, onEdit, onDelete, onAddMovement, onMarketPrediction, t }) {
     const qualityGrade = qualityGrades.find(g => g.value === stock.quality_grade) || qualityGrades[1];
 
     const getStockStatus = (quantity) => {
@@ -449,10 +450,20 @@ function StockCard({ stock, onView, onEdit, onDelete, onAddMovement, t }) {
             </div>
 
             <div className="stock-card-footer">
-                <button className="stock-footer-btn" onClick={() => onAddMovement(stock)}>
-                    <Plus size={14} />
-                    {t('add_movement')}
-                </button>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                    <button className="stock-footer-btn" onClick={() => onAddMovement(stock)}>
+                        <Plus size={14} />
+                        {t('add_movement')}
+                    </button>
+                    <button
+                        className="stock-footer-btn"
+                        onClick={() => onMarketPrediction(stock)}
+                        style={{ backgroundColor: '#e8f5e9', borderColor: '#2d5a2d' }}
+                    >
+                        <TrendingUp size={14} />
+                        {t('view_market_insights')}
+                    </button>
+                </div>
             </div>
         </div>
     );
@@ -1222,6 +1233,327 @@ function StockFormModal({ isOpen, onClose, onSubmit, editingStock, t }) {
     );
 }
 
+// Add this new component before the main MyStockManagement component
+
+function MarketPredictionModal({ isOpen, onClose, stock, t }) {
+    const [predictionData, setPredictionData] = useState(null);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
+
+    const getAuthToken = () =>
+        localStorage.getItem('access_token') ||
+        localStorage.getItem('accessToken') ||
+        sessionStorage.getItem('access_token') ||
+        sessionStorage.getItem('accessToken') ||
+        '';
+
+    const getUserLanguage = () =>
+        localStorage.getItem("language") || i18n.language || "en";
+
+    const fetchPrediction = useCallback(async () => {
+        if (!stock) return;
+
+        setLoading(true);
+        setError(null);
+
+        try {
+            const token = getAuthToken();
+            const lang = getUserLanguage();
+
+            const response = await axios.get(
+                `http://127.0.0.1:8000/prediction/stock/${stock.id}/prediction/`,
+                {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Accept-Language': lang,
+                        'Content-Type': 'application/json'
+                    }
+                }
+            );
+
+            if (response.data) {
+                setPredictionData(response.data);
+            }
+        } catch (err) {
+            console.error('Error fetching prediction:', err);
+            setError(err.response?.data?.error || err.message || t('failed_to_fetch_predictions'));
+        } finally {
+            setLoading(false);
+        }
+    }, [stock, t]);
+
+    useEffect(() => {
+        if (isOpen && stock) {
+            fetchPrediction();
+        }
+    }, [isOpen, stock, fetchPrediction]);
+
+    const getTrendIcon = (trend) => {
+        if (trend === 'up') return <TrendingUp size={20} style={{ color: '#2e7d32' }} />;
+        if (trend === 'down') return <TrendingDown size={20} style={{ color: '#c62828' }} />;
+        return <Activity size={20} style={{ color: '#64748b' }} />;
+    };
+
+    const getTrendColor = (trend) => {
+        if (trend === 'up') return '#2e7d32';
+        if (trend === 'down') return '#c62828';
+        return '#64748b';
+    };
+
+    const getRecommendationColor = (action) => {
+        if (action === 'sell_urgent' || action === 'sell') return { bg: '#fee2e2', color: '#b91c1c' };
+        if (action === 'buy_now') return { bg: '#e8f5e9', color: '#2e7d32' };
+        if (action === 'hold') return { bg: '#fff7ed', color: '#b45309' };
+        return { bg: '#f1f5f9', color: '#64748b' };
+    };
+
+    const getConfidenceColor = (confidence) => {
+        if (confidence >= 70) return { bg: '#e8f5e9', color: '#2e7d32' };
+        if (confidence >= 40) return { bg: '#fff7ed', color: '#b45309' };
+        return { bg: '#fee2e2', color: '#b91c1c' };
+    };
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
+            <div className="modal market-prediction-modal">
+                <div className="modal-header">
+                    <div>
+                        <h2>
+                            <TrendingUp size={20} style={{ marginRight: '8px', verticalAlign: 'middle' }} />
+                            {t('market_predictions')}
+                        </h2>
+                        <p>{t('market_summary_for')} <strong>{stock?.product_name}</strong></p>
+                    </div>
+                    <button className="modal-close" onClick={onClose}>
+                        <X size={18} />
+                    </button>
+                </div>
+
+                <div className="modal-body">
+                    {loading ? (
+                        <div className="prediction-loading">
+                            <div className="spinner"></div>
+                            <p>{t('fetching_predictions')}</p>
+                        </div>
+                    ) : error ? (
+                        <div className="prediction-error">
+                            <AlertCircle size={48} color="#b91c1c" />
+                            <h4>{t('insufficient_market_data')}</h4>
+                            <p>{error}</p>
+                            <button className="btn-cancel" onClick={fetchPrediction}>
+                                <RefreshCw size={14} />
+                                {t('try_again')}
+                            </button>
+                        </div>
+                    ) : predictionData ? (
+                        <>
+                            {/* Market Analysis Section */}
+                            <div className="prediction-section">
+                                <h3 className="section-title">
+                                    <BarChart2 size={18} />
+                                    {t('market_analysis')}
+                                </h3>
+                                <div className="prediction-grid">
+                                    <div className="prediction-card">
+                                        <div className="prediction-label">{t('current_market_price')}</div>
+                                        <div className="prediction-value">
+                                            {predictionData.market_analysis?.current_avg_price?.toLocaleString()} RWF/kg
+                                        </div>
+                                    </div>
+                                    <div className="prediction-card">
+                                        <div className="prediction-label">{t('predicted_future_price')}</div>
+                                        <div className="prediction-value">
+                                            {predictionData.market_analysis?.predicted_price
+                                                ? `${predictionData.market_analysis.predicted_price.toLocaleString()} RWF/kg`
+                                                : '-'}
+                                        </div>
+                                        {predictionData.market_analysis?.prediction_confidence && (
+                                            <div className="confidence-badge" style={getConfidenceColor(predictionData.market_analysis.prediction_confidence)}>
+                                                {predictionData.market_analysis.prediction_confidence}% {t('prediction_confidence')}
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="prediction-card">
+                                        <div className="prediction-label">{t('price_trend')}</div>
+                                        <div className="trend-display" style={{ color: getTrendColor(predictionData.market_analysis?.trend) }}>
+                                            {getTrendIcon(predictionData.market_analysis?.trend)}
+                                            <span style={{ fontWeight: 600 }}>
+                                                {predictionData.market_analysis?.trend_text ||
+                                                    (predictionData.market_analysis?.trend === 'up' ? t('trend_up') :
+                                                        predictionData.market_analysis?.trend === 'down' ? t('trend_down') : t('trend_stable'))}
+                                            </span>
+                                            {predictionData.market_analysis?.trend_percentage !== undefined && (
+                                                <span className="trend-percentage">
+                                                    ({predictionData.market_analysis.trend_percentage > 0 ? '+' : ''}
+                                                    {predictionData.market_analysis.trend_percentage}%)
+                                                </span>
+                                            )}
+                                        </div>
+                                        {predictionData.market_analysis?.price_change_30d !== undefined && (
+                                            <div className="price-change">
+                                                {t('price_change_30d')}:
+                                                <span style={{ color: predictionData.market_analysis.price_change_30d >= 0 ? '#2e7d32' : '#c62828' }}>
+                                                    {predictionData.market_analysis.price_change_30d >= 0 ? '+' : ''}
+                                                    {predictionData.market_analysis.price_change_30d}%
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="prediction-card">
+                                        <div className="prediction-label">{t('price_range')}</div>
+                                        <div className="prediction-value-small">
+                                            {predictionData.market_analysis?.price_range?.min?.toLocaleString()} -
+                                            {predictionData.market_analysis?.price_range?.max?.toLocaleString()} RWF/kg
+                                        </div>
+                                    </div>
+                                    <div className="prediction-card">
+                                        <div className="prediction-label">{t('total_volume_sold')}</div>
+                                        <div className="prediction-value-small">
+                                            {predictionData.market_analysis?.total_quantity_sold?.toLocaleString()} kg
+                                        </div>
+                                    </div>
+                                    <div className="prediction-card">
+                                        <div className="prediction-label">{t('transaction_count')}</div>
+                                        <div className="prediction-value-small">
+                                            {predictionData.market_analysis?.number_of_transactions || 0}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Financial Analysis Section */}
+                            {predictionData.financial_analysis && (
+                                <div className="prediction-section">
+                                    <h3 className="section-title">
+                                        <DollarSign size={18} />
+                                        {t('financial_analysis')}
+                                    </h3>
+                                    <div className="financial-grid">
+                                        <div className="financial-card">
+                                            <div className="financial-label">{t('current_stock_value')}</div>
+                                            <div className="financial-value">
+                                                {predictionData.financial_analysis.estimated_current_value_rwf?.toLocaleString()} RWF
+                                            </div>
+                                            <div className="financial-detail">
+                                                {stock?.quantity} kg × {predictionData.market_analysis?.current_avg_price?.toLocaleString()} RWF/kg
+                                            </div>
+                                        </div>
+                                        <div className="financial-card">
+                                            <div className="financial-label">{t('predicted_stock_value')}</div>
+                                            <div className="financial-value">
+                                                {predictionData.financial_analysis.estimated_future_value_rwf?.toLocaleString()} RWF
+                                            </div>
+                                            <div className="financial-detail">
+                                                {stock?.quantity} kg × {predictionData.market_analysis?.predicted_price?.toLocaleString()} RWF/kg
+                                            </div>
+                                        </div>
+                                        <div className={`financial-card ${predictionData.financial_analysis.potential_gain_loss >= 0 ? 'positive' : 'negative'}`}>
+                                            <div className="financial-label">
+                                                {predictionData.financial_analysis.potential_gain_loss >= 0 ? t('potential_gain') : t('potential_loss')}
+                                            </div>
+                                            <div className="financial-value">
+                                                {predictionData.financial_analysis.potential_gain_loss >= 0 ? '+' : ''}
+                                                {predictionData.financial_analysis.potential_gain_loss?.toLocaleString()} RWF
+                                            </div>
+                                            <div className="financial-detail">
+                                                ({predictionData.financial_analysis.percentage_change >= 0 ? '+' : ''}
+                                                {predictionData.financial_analysis.percentage_change}%)
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Recommendation Section */}
+                            {predictionData.recommendation && (
+                                <div className="prediction-section recommendation-section">
+                                    <h3 className="section-title">
+                                        <AlertCircle size={18} />
+                                        {t('market_recommendation')}
+                                    </h3>
+                                    <div
+                                        className="recommendation-card"
+                                        style={{
+                                            backgroundColor: getRecommendationColor(predictionData.recommendation.action).bg,
+                                            borderLeftColor: getRecommendationColor(predictionData.recommendation.action).color
+                                        }}
+                                    >
+                                        <div className="recommendation-header">
+                                            <span className="recommendation-action" style={{ color: getRecommendationColor(predictionData.recommendation.action).color }}>
+                                                {predictionData.recommendation.action === 'sell_urgent' && <AlertTriangle size={16} />}
+                                                {predictionData.recommendation.action === 'sell' && <TrendingDown size={16} />}
+                                                {predictionData.recommendation.action === 'hold' && <Clock size={16} />}
+                                                {predictionData.recommendation.action === 'buy_now' && <TrendingUp size={16} />}
+                                                {predictionData.recommendation.action === 'neutral' && <Minus size={16} />}
+                                                {predictionData.recommendation.action === 'sell_urgent' ? t('urgent_sell') :
+                                                    predictionData.recommendation.action === 'sell' ? t('sell_recommendation') :
+                                                        predictionData.recommendation.action === 'hold' ? t('hold_recommendation') :
+                                                            predictionData.recommendation.action === 'buy_now' ? t('buy_recommendation') :
+                                                                t('neutral_recommendation')}
+                                            </span>
+                                            <span className="recommendation-urgency">
+                                                {predictionData.recommendation.urgency_text}
+                                            </span>
+                                        </div>
+                                        <p className="recommendation-message">
+                                            {predictionData.recommendation.message}
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Stock Info Section */}
+                            {predictionData.stock && (
+                                <div className="prediction-section stock-info">
+                                    <div className="stock-info-grid">
+                                        <div className="stock-info-item">
+                                            <Package size={14} />
+                                            <span>{t('quantity')}: {predictionData.stock.quantity_kg} kg</span>
+                                        </div>
+                                        <div className="stock-info-item">
+                                            <CheckCircle size={14} />
+                                            <span>{t('quality_grade')}: {predictionData.stock.quality_text}</span>
+                                        </div>
+                                        <div className="stock-info-item">
+                                            <Calendar size={14} />
+                                            <span>{t('days_in_stock')}: {predictionData.stock.days_in_stock} {t('days')}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Disclaimer */}
+                            <div className="prediction-disclaimer">
+                                <AlertCircle size={14} />
+                                <span>{t('based_on_historical_data')}. {t('past_performance_disclaimer')}.</span>
+                            </div>
+                        </>
+                    ) : (
+                        <div className="prediction-empty">
+                            <Package size={48} color="#94a3b8" />
+                            <p>{t('no_prediction_data')}</p>
+                        </div>
+                    )}
+                </div>
+
+                <div className="modal-footer">
+                    <button className="btn-cancel" onClick={onClose}>
+                        {t('close')}
+                    </button>
+                    {!loading && !error && predictionData && (
+                        <button className="btn-save" onClick={fetchPrediction}>
+                            <RefreshCw size={14} />
+                            {t('refresh')}
+                        </button>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+}
+
 // ─── API Client ───────────────────────────────────────────────────────────────
 const apiClient = axios.create({ baseURL: API_BASE_URL, timeout: 30000 });
 
@@ -1278,6 +1610,14 @@ export default function MyStockManagement() {
     // ── Alerts ────────────────────────────────────────────────────────────────────
     const [alerts, setAlerts] = useState([]);
     const [alertsLoading, setAlertsLoading] = useState(false);
+
+    const [predictionModalOpen, setPredictionModalOpen] = useState(false);
+    const [selectedStockForPrediction, setSelectedStockForPrediction] = useState(null);
+
+    const handleMarketPrediction = (stock) => {
+        setSelectedStockForPrediction(stock);
+        setPredictionModalOpen(true);
+    };
 
     // ── Helpers ──────────────────────────────────────────────────────────────────
     const getAuthToken = () =>
@@ -1340,10 +1680,10 @@ export default function MyStockManagement() {
                 const searchTerm = currentFilters.search.toLowerCase().trim();
                 const location = (stock.location?.location || stock.location || '').toLowerCase();
                 const productName = (stock.product_name || '').toLowerCase();
-                
-                return productName.includes(searchTerm) || 
-                       location.includes(searchTerm) ||
-                       stock.id.toString().includes(searchTerm);
+
+                return productName.includes(searchTerm) ||
+                    location.includes(searchTerm) ||
+                    stock.id.toString().includes(searchTerm);
             }
 
             return true;
@@ -1393,15 +1733,15 @@ export default function MyStockManagement() {
         if (allStocks.length > 0) {
             // Apply filters
             const filtered = applyFilters(allStocks, filters);
-            
+
             // Apply sorting
             const sorted = applySorting(filtered, sortField, sortDirection);
-            
+
             // Update filtered stocks
             setFilteredStocks(sorted);
             setTotalItems(sorted.length);
             setTotalPages(Math.ceil(sorted.length / pageSize));
-            
+
             // Reset to first page when filters change
             setCurrentPage(1);
         }
@@ -1434,7 +1774,7 @@ export default function MyStockManagement() {
             if (response.data) {
                 const fetchedStocks = response.data.stocks || [];
                 setAllStocks(fetchedStocks);
-                
+
                 // Set stats based on all stocks
                 setStats({
                     total_stocks: fetchedStocks.length,
@@ -1781,6 +2121,230 @@ export default function MyStockManagement() {
         .header-right {
           display: flex;
           gap: 12px;
+        }
+
+        .market-prediction-modal {
+        max-width: 700px;
+        width: 90%;
+        }
+
+        .prediction-loading, .prediction-error, .prediction-empty {
+        text-align: center;
+        padding: 40px;
+        }
+
+        .prediction-loading .spinner {
+        margin: 0 auto 16px;
+        }
+
+        .prediction-error h4 {
+        margin: 16px 0 8px;
+        color: #b91c1c;
+        }
+
+        .prediction-error p {
+        color: #64748b;
+        margin-bottom: 20px;
+        }
+
+        .prediction-section {
+        margin-bottom: 24px;
+        }
+
+        .section-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 16px;
+        font-weight: 600;
+        color: #0f172a;
+        margin: 0 0 16px;
+        padding-bottom: 8px;
+        border-bottom: 2px solid #e2e8f0;
+        }
+
+        .prediction-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 12px;
+        }
+
+        .prediction-card {
+        padding: 16px;
+        background: #f8fafc;
+        border-radius: 12px;
+        transition: all 0.2s ease;
+        }
+
+        .prediction-card:hover {
+        background: #f1f5f9;
+        transform: translateY(-2px);
+        }
+
+        .prediction-label {
+        font-size: 12px;
+        color: #64748b;
+        margin-bottom: 8px;
+        }
+
+        .prediction-value {
+        font-size: 20px;
+        font-weight: 700;
+        color: #0f172a;
+        }
+
+        .prediction-value-small {
+        font-size: 16px;
+        font-weight: 600;
+        color: #1e293b;
+        }
+
+        .trend-display {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 18px;
+        font-weight: 600;
+        }
+
+        .trend-percentage {
+        font-size: 14px;
+        font-weight: 500;
+        opacity: 0.8;
+        }
+
+        .price-change {
+        font-size: 12px;
+        color: #64748b;
+        margin-top: 8px;
+        }
+
+        .confidence-badge {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-size: 11px;
+        font-weight: 600;
+        margin-top: 8px;
+        }
+
+        /* Financial Grid */
+        .financial-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 16px;
+        }
+
+        .financial-card {
+        padding: 16px;
+        background: #f8fafc;
+        border-radius: 12px;
+        text-align: center;
+        }
+
+        .financial-card.positive {
+        background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+        }
+
+        .financial-card.negative {
+        background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+        }
+
+        .financial-label {
+        font-size: 12px;
+        color: #64748b;
+        margin-bottom: 8px;
+        }
+
+        .financial-value {
+        font-size: 22px;
+        font-weight: 700;
+        color: #0f172a;
+        }
+
+        .financial-detail {
+        font-size: 11px;
+        color: #64748b;
+        margin-top: 6px;
+        }
+
+        /* Recommendation Section */
+        .recommendation-section {
+        margin-top: 24px;
+        }
+
+        .recommendation-card {
+        padding: 20px;
+        border-radius: 16px;
+        border-left: 4px solid;
+        }
+
+        .recommendation-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        flex-wrap: wrap;
+        gap: 8px;
+        }
+
+        .recommendation-action {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 16px;
+        font-weight: 700;
+        }
+
+        .recommendation-urgency {
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        background: rgba(0,0,0,0.05);
+        }
+
+        .recommendation-message {
+        font-size: 14px;
+        color: #1e293b;
+        line-height: 1.5;
+        margin: 0;
+        }
+
+        /* Stock Info */
+        .stock-info {
+        background: #f1f5f9;
+        border-radius: 12px;
+        padding: 12px;
+        margin-top: 16px;
+        }
+
+        .stock-info-grid {
+        display: flex;
+        justify-content: space-around;
+        flex-wrap: wrap;
+        gap: 16px;
+        }
+
+        .stock-info-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 13px;
+        color: #475569;
+        }
+
+        /* Disclaimer */
+        .prediction-disclaimer {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px;
+        background: #fef3c7;
+        border-radius: 8px;
+        font-size: 11px;
+        color: #92400e;
+        margin-top: 20px;
         }
 
         .add-stock-btn, .export-btn {
@@ -3118,6 +3682,25 @@ export default function MyStockManagement() {
             grid-template-columns: 1fr;
           }
         }
+
+        /* Responsive */
+@media (max-width: 640px) {
+  .market-prediction-modal {
+    max-width: 95%;
+  }
+  
+  .prediction-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .financial-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .stock-info-grid {
+    flex-direction: column;
+    align-items: center;
+  }
       `}</style>
 
             {/* Page Header */}
@@ -3243,6 +3826,7 @@ export default function MyStockManagement() {
                                     onEdit={handleEditStock}
                                     onDelete={handleDeleteStock}
                                     onAddMovement={handleAddMovement}
+                                    onMarketPrediction={handleMarketPrediction}
                                     t={t}
                                 />
                             ))}
@@ -3297,10 +3881,14 @@ export default function MyStockManagement() {
                                                 </td>
                                                 <td>{stock.movements_count || 0}</td>
                                                 <td>{new Date(stock.created_at).toLocaleDateString()}</td>
+                                                // In the list view table, add a new button in the actions column
                                                 <td onClick={(e) => e.stopPropagation()}>
                                                     <div className="movement-actions">
                                                         <button className="movement-action-btn" onClick={() => handleAddMovement(stock)} title={t('add_movement')}>
                                                             <Plus size={14} />
+                                                        </button>
+                                                        <button className="movement-action-btn" onClick={() => handleMarketPrediction(stock)} title={t('view_market_insights')}>
+                                                            <TrendingUp size={14} />
                                                         </button>
                                                         <button className="movement-action-btn" onClick={() => handleEditStock(stock)}>
                                                             <Edit2 size={14} />
@@ -3360,6 +3948,17 @@ export default function MyStockManagement() {
                     t={t}
                 />
             )}
+
+            {/* Market Prediction Modal */}
+            <MarketPredictionModal
+                isOpen={predictionModalOpen}
+                onClose={() => {
+                    setPredictionModalOpen(false);
+                    setSelectedStockForPrediction(null);
+                }}
+                stock={selectedStockForPrediction}
+                t={t}
+            />
         </div>
     );
 }

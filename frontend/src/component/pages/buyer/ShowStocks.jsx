@@ -1,5 +1,6 @@
 /* eslint-disable no-unused-vars */
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import ReactDOM from "react-dom";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -14,6 +15,7 @@ import {
   Sprout, Globe, User, CheckCircle2, AlertCircle, RefreshCw,
   Loader2, Truck, Handshake, Edit2, Phone, Mail, ShieldCheck, Calendar, FileText
 } from "lucide-react";
+import { TrendingUp, TrendingDown, Activity, CheckCircle } from "lucide-react";
 import locationData from "../../common/locationData.json";
 
 // ─── Config ───────────────────────────────────────────────────────────────────
@@ -25,6 +27,10 @@ const QUALITY = {
   B: { labelKey: "quality_standard", color: "#1e3a5f", bg: "#dbeafe", dot: "#2563eb", icon: "◆" },
   C: { labelKey: "quality_economy", color: "#713f12", bg: "#fef9c3", dot: "#ca8a04", icon: "◇" },
 };
+
+function Portal({ children }) {
+  return ReactDOM.createPortal(children, document.body);
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function fmt(n) { return Number(n).toLocaleString(); }
@@ -347,8 +353,423 @@ apiClient.interceptors.response.use(
   }
 );
 
-// ─── Contract Form Modal for Stock ────────────────────────────────────────────
-// ─── Contract Form Modal for Stock (Professional Design) ─────────────────────
+function BuyerMarketPredictionModal({ isOpen, onClose, cropName, stock, t }) {
+  const [predictionData, setPredictionData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const getAuthToken = () =>
+    localStorage.getItem('access_token') ||
+    localStorage.getItem('accessToken') ||
+    sessionStorage.getItem('access_token') ||
+    sessionStorage.getItem('accessToken') ||
+    '';
+
+  const getUserLanguage = () =>
+    localStorage.getItem("language") || "en";
+
+  const fetchPrediction = useCallback(async () => {
+    if (!cropName && !stock?.product_name) return;
+
+    const cropToAnalyze = cropName || stock?.product_name;
+    setLoading(true);
+    setError(null);
+
+    try {
+      const token = getAuthToken();
+      const lang = getUserLanguage();
+
+      const response = await axios.get(
+        `http://127.0.0.1:8000/prediction/market/${encodeURIComponent(cropToAnalyze)}/`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept-Language': lang,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      if (response.data) {
+        setPredictionData(response.data);
+      }
+    } catch (err) {
+      console.error('Error fetching market prediction:', err);
+      setError(err.response?.data?.error || err.message || t('failed_to_fetch_predictions'));
+    } finally {
+      setLoading(false);
+    }
+  }, [cropName, stock, t]);
+
+  useEffect(() => {
+    if (isOpen && (cropName || stock)) {
+      fetchPrediction();
+    }
+  }, [isOpen, cropName, stock, fetchPrediction]);
+
+  const getTrendIcon = (trend) => {
+    if (trend === 'up') return <TrendingUp size={20} style={{ color: '#2e7d32' }} />;
+    if (trend === 'down') return <TrendingDown size={20} style={{ color: '#c62828' }} />;
+    return <Activity size={20} style={{ color: '#64748b' }} />;
+  };
+
+  const getTrendColor = (trend) => {
+    if (trend === 'up') return '#2e7d32';
+    if (trend === 'down') return '#c62828';
+    return '#64748b';
+  };
+
+  const getRecommendationColor = (action) => {
+    if (action === 'buy_now') return { bg: '#e8f5e9', color: '#2e7d32' };
+    if (action === 'wait') return { bg: '#fff7ed', color: '#b45309' };
+    if (action === 'monitor') return { bg: '#e3f2fd', color: '#1565c0' };
+    return { bg: '#f1f5f9', color: '#64748b' };
+  };
+
+  const getConfidenceColor = (confidence) => {
+    if (confidence >= 70) return { bg: '#e8f5e9', color: '#2e7d32' };
+    if (confidence >= 40) return { bg: '#fff7ed', color: '#b45309' };
+    return { bg: '#fee2e2', color: '#b91c1c' };
+  };
+
+  if (!isOpen) return null;
+
+  const cropDisplayName = cropName || stock?.product_name;
+
+  return (
+    <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="modal-card buyer-prediction-modal" style={{ maxWidth: "650px", borderRadius: "24px" }}>
+        <div className="modal-head" style={{
+          background: "linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%)",
+          color: "white",
+          borderBottom: "none",
+          borderRadius: "24px 24px 0 0"
+        }}>
+          <div>
+            <h2 style={{ color: "white", display: "flex", alignItems: "center", gap: "8px" }}>
+              <TrendingUp size={24} />
+              {t('market_predictions') || "Market Predictions"}
+            </h2>
+            <p style={{ color: "rgba(255,255,255,0.8)", fontSize: "13px", marginTop: "4px" }}>
+              {t('market_summary_for') || "Market summary for"} <strong>{cropDisplayName}</strong>
+            </p>
+          </div>
+          <button className="modal-close" onClick={onClose} style={{ background: "rgba(255,255,255,0.2)", color: "white" }}>
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="modal-body" style={{ padding: "24px" }}>
+          {loading ? (
+            <div className="prediction-loading" style={{ textAlign: "center", padding: "40px" }}>
+              <div className="spinner" style={{ margin: "0 auto 16px" }}></div>
+              <p>{t('fetching_predictions') || "Fetching market predictions..."}</p>
+            </div>
+          ) : error ? (
+            <div className="prediction-error" style={{ textAlign: "center", padding: "40px" }}>
+              <AlertCircle size={48} color="#b91c1c" />
+              <h4 style={{ margin: "16px 0 8px", color: "#b91c1c" }}>
+                {t('insufficient_market_data') || "Insufficient Market Data"}
+              </h4>
+              <p style={{ color: "#64748b", marginBottom: "20px" }}>{error}</p>
+              <button className="btn-cancel" onClick={fetchPrediction}>
+                <RefreshCw size={14} /> {t('try_again') || "Try Again"}
+              </button>
+            </div>
+          ) : predictionData ? (
+            <>
+              {/* Market Analysis Grid */}
+              <div className="prediction-grid" style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+                gap: "12px",
+                marginBottom: "24px"
+              }}>
+                <div className="prediction-card" style={{
+                  padding: "16px",
+                  background: "#f8fafc",
+                  borderRadius: "12px"
+                }}>
+                  <div className="prediction-label" style={{ fontSize: "11px", color: "#64748b", marginBottom: "8px" }}>
+                    {t('current_market_price') || "Current Market Price"}
+                  </div>
+                  <div className="prediction-value" style={{ fontSize: "20px", fontWeight: 700, color: "#0f172a" }}>
+                    {predictionData.current_avg_price?.toLocaleString()} RWF/kg
+                  </div>
+                </div>
+
+                <div className="prediction-card" style={{
+                  padding: "16px",
+                  background: "#f8fafc",
+                  borderRadius: "12px"
+                }}>
+                  <div className="prediction-label" style={{ fontSize: "11px", color: "#64748b", marginBottom: "8px" }}>
+                    {t('predicted_future_price') || "Predicted Future Price"}
+                  </div>
+                  <div className="prediction-value" style={{ fontSize: "20px", fontWeight: 700, color: "#0f172a" }}>
+                    {predictionData.predicted_price
+                      ? `${predictionData.predicted_price.toLocaleString()} RWF/kg`
+                      : '-'}
+                  </div>
+                  {predictionData.prediction_confidence && (
+                    <div className="confidence-badge" style={getConfidenceColor(predictionData.prediction_confidence)}>
+                      {predictionData.prediction_confidence}% {t('confidence') || "confidence"}
+                    </div>
+                  )}
+                </div>
+
+                <div className="prediction-card" style={{
+                  padding: "16px",
+                  background: "#f8fafc",
+                  borderRadius: "12px"
+                }}>
+                  <div className="prediction-label" style={{ fontSize: "11px", color: "#64748b", marginBottom: "8px" }}>
+                    {t('price_trend') || "Price Trend"}
+                  </div>
+                  <div className="trend-display" style={{ display: "flex", alignItems: "center", gap: "8px", color: getTrendColor(predictionData.trend) }}>
+                    {getTrendIcon(predictionData.trend)}
+                    <span style={{ fontWeight: 600 }}>{predictionData.trend_text}</span>
+                    {predictionData.trend_percentage !== undefined && (
+                      <span className="trend-percentage" style={{ fontSize: "13px" }}>
+                        ({predictionData.trend_percentage > 0 ? '+' : ''}{predictionData.trend_percentage}%)
+                      </span>
+                    )}
+                  </div>
+                  {predictionData.price_change_30d !== undefined && (
+                    <div className="price-change" style={{ fontSize: "11px", color: "#64748b", marginTop: "8px" }}>
+                      {t('price_change_30d') || "30-day change"}:
+                      <span style={{ color: predictionData.price_change_30d >= 0 ? '#2e7d32' : '#c62828' }}>
+                        {predictionData.price_change_30d >= 0 ? '+' : ''}{predictionData.price_change_30d}%
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="prediction-card" style={{
+                  padding: "16px",
+                  background: "#f8fafc",
+                  borderRadius: "12px"
+                }}>
+                  <div className="prediction-label" style={{ fontSize: "11px", color: "#64748b", marginBottom: "8px" }}>
+                    {t('price_range') || "Price Range"}
+                  </div>
+                  <div className="prediction-value-small" style={{ fontSize: "14px", fontWeight: 600 }}>
+                    {predictionData.price_range?.min?.toLocaleString()} - {predictionData.price_range?.max?.toLocaleString()} RWF/kg
+                  </div>
+                </div>
+              </div>
+
+              {/* Market Stats */}
+              <div className="market-stats" style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "12px",
+                marginBottom: "24px",
+                padding: "16px",
+                background: "#f1f5f9",
+                borderRadius: "16px"
+              }}>
+                <div>
+                  <div style={{ fontSize: "11px", color: "#64748b" }}>{t('total_volume_sold') || "Total Volume Sold"}</div>
+                  <div style={{ fontSize: "16px", fontWeight: 700, color: "#0f172a" }}>
+                    {predictionData.total_quantity_sold?.toLocaleString()} kg
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: "11px", color: "#64748b" }}>{t('transaction_count') || "Transactions"}</div>
+                  <div style={{ fontSize: "16px", fontWeight: 700, color: "#0f172a" }}>
+                    {predictionData.number_of_transactions || 0}
+                  </div>
+                </div>
+              </div>
+
+              {/* Buyer Recommendation Section */}
+              {predictionData.recommendation && (
+                <div className="recommendation-section" style={{ marginBottom: "20px" }}>
+                  <h3 className="section-title" style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    fontSize: "14px",
+                    fontWeight: 600,
+                    marginBottom: "12px"
+                  }}>
+                    <AlertCircle size={16} />
+                    {t('market_recommendation') || "Market Recommendation"}
+                  </h3>
+                  <div className="recommendation-card" style={{
+                    padding: "20px",
+                    borderRadius: "16px",
+                    borderLeft: "4px solid",
+                    ...getRecommendationColor(predictionData.recommendation.action)
+                  }}>
+                    <div className="recommendation-header" style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      marginBottom: "12px",
+                      flexWrap: "wrap",
+                      gap: "8px"
+                    }}>
+                      <span className="recommendation-action" style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        fontSize: "16px",
+                        fontWeight: 700,
+                        color: getRecommendationColor(predictionData.recommendation.action).color
+                      }}>
+                        {predictionData.recommendation.action === 'buy_now' && <TrendingUp size={16} />}
+                        {predictionData.recommendation.action === 'wait' && <Clock size={16} />}
+                        {predictionData.recommendation.action === 'monitor' && <Eye size={16} />}
+                        {predictionData.recommendation.action === 'buy_now' ? (t('buy_now') || "Buy Now") :
+                          predictionData.recommendation.action === 'wait' ? (t('wait') || "Wait") :
+                            (t('monitor') || "Monitor")}
+                      </span>
+                      <span className="recommendation-urgency" style={{
+                        padding: "4px 10px",
+                        borderRadius: "20px",
+                        fontSize: "11px",
+                        fontWeight: 600,
+                        background: "rgba(0,0,0,0.05)"
+                      }}>
+                        {predictionData.recommendation.urgency_text}
+                      </span>
+                    </div>
+                    <p className="recommendation-message" style={{ fontSize: "13px", color: "#1e293b", lineHeight: 1.5, margin: 0 }}>
+                      {predictionData.recommendation.message}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Price Comparison with Stock (if stock provided) */}
+              {stock && stock.price_per_kg && (
+                <div className="price-comparison" style={{
+                  marginBottom: "20px",
+                  padding: "16px",
+                  background: "linear-gradient(135deg, #e8f5e9, #dcfce7)",
+                  borderRadius: "16px",
+                  border: "1px solid #bbf7d0"
+                }}>
+                  <h4 style={{ fontSize: "13px", fontWeight: 600, marginBottom: "10px", color: "#166534" }}>
+                    {t('price_analysis') || "Price Analysis"}
+                  </h4>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
+                    <span style={{ fontSize: "13px", color: "#166534" }}>{t('this_stock_price') || "This stock's price"}:</span>
+                    <span style={{ fontWeight: 700, color: "#14532d" }}>{stock.price_per_kg.toLocaleString()} RWF/kg</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span style={{ fontSize: "13px", color: "#166534" }}>{t('market_average') || "Market average"}:</span>
+                    <span style={{ fontWeight: 700, color: "#14532d" }}>{predictionData.current_avg_price?.toLocaleString()} RWF/kg</span>
+                  </div>
+                  <div style={{ marginTop: "10px", paddingTop: "8px", borderTop: "1px solid #bbf7d0" }}>
+                    {stock.price_per_kg < predictionData.current_avg_price ? (
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "#2e7d32" }}>
+                        <TrendingUp size={14} />
+                        <span style={{ fontSize: "12px", fontWeight: 500 }}>
+                          {t('below_market_price') || "This stock is below market average — Good value!"}
+                        </span>
+                      </div>
+                    ) : stock.price_per_kg > predictionData.current_avg_price ? (
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "#b45309" }}>
+                        <AlertCircle size={14} />
+                        <span style={{ fontSize: "12px", fontWeight: 500 }}>
+                          {t('above_market_price') || "This stock is above market average — Consider negotiating"}
+                        </span>
+                      </div>
+                    ) : (
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "#1565c0" }}>
+                        <CheckCircle size={14} />
+                        <span style={{ fontSize: "12px", fontWeight: 500 }}>
+                          {t('market_price_match') || "Price matches market average"}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Disclaimer */}
+              <div className="prediction-disclaimer" style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                padding: "10px",
+                background: "#fef3c7",
+                borderRadius: "8px",
+                fontSize: "10px",
+                color: "#92400e"
+              }}>
+                <AlertCircle size={12} />
+                <span>{t('based_on_historical_data') || "Based on historical data and market trends"} — {t('past_performance_disclaimer') || "Past performance does not guarantee future results"}</span>
+              </div>
+            </>
+          ) : (
+            <div className="prediction-empty" style={{ textAlign: "center", padding: "40px" }}>
+              <Package size={48} color="#94a3b8" />
+              <p style={{ marginTop: "12px", color: "#64748b" }}>
+                {t('no_prediction_data') || "No prediction data available"}
+              </p>
+            </div>
+          )}
+        </div>
+
+        <div className="modal-footer" style={{
+          padding: "16px 24px",
+          borderTop: "1px solid #e2e8f0",
+          display: "flex",
+          justifyContent: "flex-end",
+          gap: "12px"
+        }}>
+          <button className="btn-cancel" onClick={onClose}>
+            {t('close') || "Close"}
+          </button>
+          {!loading && !error && predictionData && (
+            <button className="btn-save" onClick={fetchPrediction}>
+              <RefreshCw size={14} />
+              {t('refresh') || "Refresh"}
+            </button>
+          )}
+        </div>
+      </div>
+
+      <style>{`
+                @keyframes fadeIn {
+                    from { opacity: 0; transform: translateY(10px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+                .buyer-prediction-modal .prediction-card,
+                .buyer-prediction-modal .recommendation-card,
+                .buyer-prediction-modal .price-comparison {
+                    animation: fadeIn 0.3s ease;
+                }
+                .buyer-prediction-modal .spinner {
+                    width: 40px;
+                    height: 40px;
+                    border: 3px solid #e2e8f0;
+                    border-top-color: #2d5a2d;
+                    border-radius: 50%;
+                    animation: spin 1s linear infinite;
+                }
+                @keyframes spin {
+                    to { transform: rotate(360deg); }
+                }
+                @media (max-width: 640px) {
+                    .buyer-prediction-modal .prediction-grid {
+                        grid-template-columns: 1fr;
+                    }
+                    .buyer-prediction-modal .market-stats {
+                        grid-template-columns: 1fr;
+                        gap: 12px;
+                    }
+                }
+            `}</style>
+    </div>
+  );
+}
+
+
 function StockContractModal({ isOpen, onClose, onSubmit, stock, apiClient }) {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
@@ -1282,10 +1703,11 @@ function StockContractModal({ isOpen, onClose, onSubmit, stock, apiClient }) {
 }
 
 // ─── StockDetailModal ─────────────────────────────────────────────────────────
-function StockDetailModal({ stock, onClose, onContract, onChat }) {
+function StockDetailModal({ stock, onClose, onContract, onChat, onMarketPrediction }) {
   const { t } = useTranslation();
   const q = QUALITY[stock.quality_grade] || QUALITY.B;
   const val = stock.price_per_kg ? stock.quantity * stock.price_per_kg : null;
+
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -1412,6 +1834,10 @@ function StockDetailModal({ stock, onClose, onContract, onChat }) {
           <button className="sdm-btn sdm-btn-chat" onClick={() => onChat(stock)}>
             <MessageCircle size={18} /> {t("chat_with_farmer_btn", "Chat with Farmer")}
           </button>
+          <button className="sdm-btn" onClick={() => onMarketPrediction(stock.product_name, stock)}
+            style={{ background: "#e3f2fd", color: "#1565c0", border: "none" }}>
+            <TrendingUp size={18} /> {t("market_insights", "Market Insights")}
+          </button>
           <button className="sdm-btn sdm-btn-contract" onClick={() => onContract(stock)}>
             <FileSignature size={18} /> {t("apply_contract_btn", "Apply Contract")}
           </button>
@@ -1422,11 +1848,12 @@ function StockDetailModal({ stock, onClose, onContract, onChat }) {
 }
 
 // ─── StockCard ────────────────────────────────────────────────────────────────
-function StockCard({ stock, onView, onContract, onChat, viewMode }) {
+function StockCard({ stock, onView, onContract, onChat, viewMode, onMarketPrediction }) {
   const { t } = useTranslation();
   const q = QUALITY[stock.quality_grade] || QUALITY.B;
   const isLow = stock.quantity < 100;
   const isMed = stock.quantity >= 100 && stock.quantity < 500;
+
 
   if (viewMode === "list") {
     return (
@@ -1453,6 +1880,10 @@ function StockCard({ stock, onView, onContract, onChat, viewMode }) {
           <button className="sc-btn-sm sc-btn-chat"
             title={t("chat_with_farmer_btn", "Chat with Farmer")}
             onClick={() => onChat(stock)}><MessageCircle size={14} /></button>
+          <button className="sc-btn-sm"
+            title={t("market_insights", "Market Insights")}
+            onClick={() => onMarketPrediction(stock.product_name, stock)}
+            style={{ background: "#e3f2fd", color: "#1565c0" }}><TrendingUp size={14} /></button>
           <button className="sc-btn-sm sc-btn-contract"
             title={t("apply_contract_btn", "Apply Contract")}
             onClick={() => onContract(stock)}><FileSignature size={14} /></button>
@@ -1508,9 +1939,13 @@ function StockCard({ stock, onView, onContract, onChat, viewMode }) {
         <button className="sc-view-btn" onClick={() => onView(stock)}>
           <Eye size={14} /> {t("view_details_btn", "View Details")}
         </button>
-        <div className="sc-action-row">
+        <div className="sc-action-row" style={{ gridTemplateColumns: "1fr 1fr 1fr", gap: "6px" }}>
           <button className="sc-action-btn sc-chat-btn" onClick={() => onChat(stock)}>
             <MessageCircle size={14} /> {t("chat_short_btn", "Chat")}
+          </button>
+          <button className="sc-action-btn" onClick={() => onMarketPrediction(stock.product_name, stock)}
+            style={{ background: "#e3f2fd", color: "#1565c0" }}>
+            <TrendingUp size={14} /> {t("market_insights", "Insights")}
           </button>
           <button className="sc-action-btn sc-contract-btn" onClick={() => onContract(stock)}>
             <FileSignature size={14} /> {t("contract_short_btn", "Contract")}
@@ -1688,6 +2123,16 @@ export default function BuyerMarketplace() {
 
   const debouncedSearch = useDebounce(search, 300);
   const abortRef = useRef(null);
+
+  const [predictionModalOpen, setPredictionModalOpen] = useState(false);
+  const [selectedCropForPrediction, setSelectedCropForPrediction] = useState(null);
+  const [selectedStockForPrediction, setSelectedStockForPrediction] = useState(null);
+
+  const handleMarketPrediction = useCallback((cropName, stock = null) => {
+    setSelectedCropForPrediction(cropName);
+    setSelectedStockForPrediction(stock);
+    setPredictionModalOpen(true);
+  }, []);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 900);
@@ -2551,6 +2996,7 @@ export default function BuyerMarketplace() {
                       onView={setSelected}
                       onContract={handleContract}
                       onChat={handleChat}
+                      onMarketPrediction={handleMarketPrediction}
                     />
                   ))}
                 </div>
@@ -2579,26 +3025,46 @@ export default function BuyerMarketplace() {
       )}
 
       {/* Stock Detail Modal */}
-      {selected && (
-        <StockDetailModal
-          stock={selected}
-          onClose={() => setSelected(null)}
-          onContract={s => { handleContract(s); setSelected(null); }}
-          onChat={s => { handleChat(s); setSelected(null); }}
-        />
-      )}
+      <Portal>
+        {selected && (
+          <StockDetailModal
+            stock={selected}
+            onClose={() => setSelected(null)}
+            onContract={s => { handleContract(s); setSelected(null); }}
+            onChat={s => { handleChat(s); setSelected(null); }}
+            onMarketPrediction={handleMarketPrediction}
+          />
+        )}
+      </Portal>
 
       {/* Contract Creation Modal */}
-      <StockContractModal
-        isOpen={showContractModal}
-        onClose={() => {
-          setShowContractModal(false);
-          setSelectedStockForContract(null);
-        }}
-        onSubmit={handleCreateContract}
-        stock={selectedStockForContract}
-        apiClient={apiClient}
-      />
+      <Portal>
+        <StockContractModal
+          isOpen={showContractModal}
+          onClose={() => {
+            setShowContractModal(false);
+            setSelectedStockForContract(null);
+          }}
+          onSubmit={handleCreateContract}
+          stock={selectedStockForContract}
+          apiClient={apiClient}
+        />
+      </Portal>
+
+      {/* Market Prediction Modal */}
+      <Portal>
+        <BuyerMarketPredictionModal
+          isOpen={predictionModalOpen}
+          onClose={() => {
+            setPredictionModalOpen(false);
+            setSelectedCropForPrediction(null);
+            setSelectedStockForPrediction(null);
+          }}
+          cropName={selectedCropForPrediction}
+          stock={selectedStockForPrediction}
+          t={t}
+        />
+      </Portal>
 
       {/* Toast */}
       {toastMsg && (
