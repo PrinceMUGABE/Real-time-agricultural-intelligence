@@ -1840,8 +1840,8 @@ function ContractDetailsModal({ isOpen, onClose, contract, onUpdate, onPayment, 
                                             </div>
                                         </div>
                                         <div className="party-info">
-                                            <Phone size={14} /> {contract.farmer_detail?.phone_number}
-                                            <Mail size={14} /> {contract.farmer_detail?.email}
+                                            {/* <Phone size={14} /> {contract.farmer_detail?.phone_number}
+                                            <Mail size={14} /> {contract.farmer_detail?.email} */}
                                             <MapPin size={14} /> {contract.farmer_detail?.location}
                                         </div>
                                         <div className="party-status">
@@ -1925,8 +1925,8 @@ function ContractDetailsModal({ isOpen, onClose, contract, onUpdate, onPayment, 
                                         <div className="deliver-info">
                                             <User size={16} />
                                             <span>{contract.deliver_detail.full_name}</span>
-                                            <Phone size={16} />
-                                            <span>{contract.deliver_detail.phone_number}</span>
+                                            {/* <Phone size={16} />
+                                            <span>{contract.deliver_detail.phone_number}</span> */}
                                         </div>
                                     </div>
                                 </div>
@@ -2183,7 +2183,7 @@ export default function BuyerContracts() {
                     toast.error(t('session_expired'));
                     localStorage.removeItem('access_token');
                     localStorage.removeItem('accessToken');
-                    setTimeout(() => navigate('/login'), 2000);
+                    setTimeout(() => navigate('/'), 2000);
                 }
                 return Promise.reject(error);
             }

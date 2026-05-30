@@ -216,7 +216,7 @@ EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'princemugabe567@gmail.com'
-EMAIL_HOST_PASSWORD = 'ooke lknm zzst pmvu'
+EMAIL_HOST_PASSWORD = 'eaqt zmdd qlrh ndlf'
 DEFAULT_FROM_EMAIL = 'minagri<princemugabe567@gmail.com>'
 
 AUTH_USER_MODEL = 'userApp.CustomUser'

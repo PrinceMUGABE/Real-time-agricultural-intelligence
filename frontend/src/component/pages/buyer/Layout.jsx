@@ -676,7 +676,7 @@ export default function BuyerLayout() {
   // ── Nav items — each route has a semantically correct icon ────────────────
   const navItems = [
     { icon: <Handshake       size={17} />, label: t("nav.marketMatches", { defaultValue: "Market Matches" }), path: "/buyer/market-matches"        },
-    { icon: <Wheat           size={17} />, label: t("nav.dataEntry",     { defaultValue: "Data Entry" }),     path: "/buyer/crops"                 },
+    { icon: <Wheat           size={17} />, label: t("nav.stocks",     { defaultValue: "Stocks" }),     path: "/buyer/crops"                 },
     { icon: <FileSignature   size={17} />, label: t("nav.contracts",     { defaultValue: "Contracts" }),      path: "/buyer/contracts"             },
     { icon: <ClipboardList   size={17} />, label: t("nav.standards",     { defaultValue: "Standards" }),      path: "/buyer/standards"             },
     { icon: <MessageSquare   size={17} />, label: t("nav.chats",         { defaultValue: "Chats" }),          path: "/buyer/chats"                 },
